@@ -552,7 +552,11 @@ export async function prepareSwissRequest(request, form = null) {
       longitudeInput.dataset.manual = "false";
     }
     if (coordinateToggle) coordinateToggle.checked = false;
-    if (timezoneInput && city.timezone && isValidTimeZone(city.timezone)) timezoneInput.value = city.timezone;
+    if (timezoneInput && city.timezone && isValidTimeZone(city.timezone)) {
+      timezoneInput.value = city.timezone;
+      timezoneInput.dataset.userSelected = "false";
+      delete timezoneInput.dataset.userSelectedCoordinates;
+    }
   }
 
   const latitudeField = form?.querySelector('[name="lat"]');
@@ -563,9 +567,8 @@ export async function prepareSwissRequest(request, form = null) {
     latitudeField?.dataset.manual === "true" || longitudeField?.dataset.manual === "true"
   ));
   const sameLocationAsNatal = normalize(location) === normalize(natal.location);
-  const formTimezone = String(
-    form?.querySelector('[name="timezone"]')?.value || payload.timezone || "",
-  ).trim();
+  const timezoneInput = form?.querySelector('[name="timezone"]');
+  const formTimezone = String(timezoneInput?.value || payload.timezone || "").trim();
   let selectedTimezone = customCoordinates
     ? (formTimezone || (sameLocationAsNatal ? natal.timezone : ""))
     : (city?.timezone || formTimezone || (sameLocationAsNatal ? natal.timezone : ""));
@@ -573,20 +576,6 @@ export async function prepareSwissRequest(request, form = null) {
     payload.utcMode ||
     form?.querySelector('[name="utcMode"]')?.value ||
     (selectedTimezone || city ? "auto" : "manual");
-  if (mode !== "manual" && customCoordinates && !selectedTimezone) {
-    selectedTimezone = await lookupTimezoneForCoordinates(
-      Number(customCoordinates.lat),
-      Number(customCoordinates.long),
-    );
-  }
-  if (selectedTimezone && !isValidTimeZone(selectedTimezone)) {
-    throw new Error(`Unknown time zone: ${selectedTimezone}. Choose an IANA zone such as America/Sao_Paulo or use Manual UTC offset.`);
-  }
-  const timezoneCity = selectedTimezone
-    ? { timezone: selectedTimezone, utcOffset: city?.utcOffset ?? natal.utcOffset ?? "UTC+00:00" }
-    : city || (sameLocationAsNatal && natal.timezone
-      ? { timezone: natal.timezone, utcOffset: natal.utcOffset }
-      : null);
   const useCityCoordinates = city && !manualCoordinates;
   const lat = useCityCoordinates
     ? city.lat
@@ -616,6 +605,28 @@ export async function prepareSwissRequest(request, form = null) {
   ) {
     throw new Error("Latitude must be -90..90 and longitude -180..180.");
   }
+
+  const coordinateKey = `${formatCoordinateValue(latitude)},${formatCoordinateValue(longitude)}`;
+  if (
+    mode !== "manual" &&
+    manualCoordinates &&
+    !(
+      timezoneInput?.dataset.userSelected === "true" &&
+      timezoneInput.dataset.userSelectedCoordinates === coordinateKey
+    )
+  ) {
+    selectedTimezone = await lookupTimezoneForCoordinates(latitude, longitude);
+  } else if (mode !== "manual" && customCoordinates && !selectedTimezone) {
+    selectedTimezone = await lookupTimezoneForCoordinates(latitude, longitude);
+  }
+  if (selectedTimezone && !isValidTimeZone(selectedTimezone)) {
+    throw new Error(`Unknown time zone: ${selectedTimezone}. Choose an IANA zone such as America/Sao_Paulo or use Manual UTC offset.`);
+  }
+  const timezoneCity = selectedTimezone
+    ? { timezone: selectedTimezone, utcOffset: city?.utcOffset ?? natal.utcOffset ?? "UTC+00:00" }
+    : city || (sameLocationAsNatal && natal.timezone
+      ? { timezone: natal.timezone, utcOffset: natal.utcOffset }
+      : null);
 
   let utcOffset;
   if (mode === "manual") {
@@ -1296,6 +1307,8 @@ export function setupLocalLocationFields() {
     longitudeInput.dataset.manual = "false";
     if (timezoneInput) {
       timezoneInput.value = record.timezone && isValidTimeZone(record.timezone) ? record.timezone : "";
+      timezoneInput.dataset.userSelected = "false";
+      delete timezoneInput.dataset.userSelectedCoordinates;
       timezoneInput.dispatchEvent(new Event("change", { bubbles: true }));
     }
   }
@@ -1327,8 +1340,36 @@ export function setupLocalLocationFields() {
         if (coordinateToggle) coordinateToggle.checked = true;
         locationInput.value = coordinateLocationLabel(customCoordinates.lat, customCoordinates.long);
         locationInput.dataset.coordinateMode = "true";
+        const coordinateKey = `${formatCoordinateValue(customCoordinates.lat)},${formatCoordinateValue(customCoordinates.long)}`;
+        const utcMode = fields.querySelector('[name="utcMode"]')?.value || "auto";
+        if (
+          utcMode !== "manual" &&
+          !(
+            timezoneInput?.dataset.userSelected === "true" &&
+            timezoneInput.dataset.userSelectedCoordinates === coordinateKey
+          )
+        ) {
+          try {
+            const timezone = await lookupTimezoneForCoordinates(
+              customCoordinates.lat,
+              customCoordinates.long,
+            );
+            if (resolutionToken !== Number(locationInput.dataset.resolutionToken)) return null;
+            timezoneInput.value = timezone;
+            timezoneInput.dataset.userSelected = "false";
+            delete timezoneInput.dataset.userSelectedCoordinates;
+          } catch {
+            if (resolutionToken !== Number(locationInput.dataset.resolutionToken)) return null;
+            timezoneInput.value = "";
+            timezoneInput.dataset.userSelected = "false";
+            delete timezoneInput.dataset.userSelectedCoordinates;
+            updateOffsetPreview(form, fields);
+            setStatus(status, "Coordinates loaded, but the time zone could not be detected. Choose an IANA time zone or switch to Manual UTC offset.", "warning");
+            return { ...customCoordinates };
+          }
+        }
         updateOffsetPreview(form, fields);
-        setStatus(status, "Coordinates loaded. Choose a time zone for automatic UTC, or switch to Manual UTC offset.", "success");
+        setStatus(status, "Coordinates loaded with the time zone determined from their location.", "success");
         return { ...customCoordinates };
       }
       let cities = [];
@@ -1551,10 +1592,14 @@ export function setupLocalLocationFields() {
           const timezone = await lookupTimezoneForCoordinates(lat, longitude);
           if (revision !== coordinateLookupRevision) return true;
           timezoneInput.value = timezone;
+          timezoneInput.dataset.userSelected = "false";
+          delete timezoneInput.dataset.userSelectedCoordinates;
           timezoneInput.dispatchEvent(new Event("change", { bubbles: true }));
         } catch (_) {
           if (revision !== coordinateLookupRevision) return true;
           timezoneInput.value = "";
+          timezoneInput.dataset.userSelected = "false";
+          delete timezoneInput.dataset.userSelectedCoordinates;
           setStatus(resolutionStatus, "Coordinates added, but the exact time zone could not be detected automatically. Choose an IANA time zone or switch to Manual UTC offset.", "warning");
           updateOffsetPreview(form, fields);
           return true;
@@ -1611,7 +1656,16 @@ export function setupLocalLocationFields() {
 
     utcMode.addEventListener("change", syncMode);
     utcOffset.addEventListener("input", () => updateOffsetPreview(form, fields));
-    timezoneInput.addEventListener("input", () => updateOffsetPreview(form, fields));
+    timezoneInput.addEventListener("input", () => {
+      timezoneInput.dataset.userSelected = "true";
+      const lat = Number(latitudeInput.value);
+      const longitude = Number(longitudeInput.value);
+      timezoneInput.dataset.userSelectedCoordinates =
+        Number.isFinite(lat) && Number.isFinite(longitude)
+          ? `${formatCoordinateValue(lat)},${formatCoordinateValue(longitude)}`
+          : "";
+      updateOffsetPreview(form, fields);
+    });
     timezoneInput.addEventListener("change", () => {
       if (timezoneInput.value && !isValidTimeZone(timezoneInput.value)) {
         setStatus(fields.querySelector(".location-resolution-status"), `Unknown time zone "${timezoneInput.value}". Choose a value from the suggestions.`, "error");
