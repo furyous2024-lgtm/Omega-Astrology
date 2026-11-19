@@ -203,6 +203,27 @@ function formatUtcOffset(offset) {
   return `UTC${sign}${hours}:${minutes}`;
 }
 
+async function lookupTimezoneForCoordinates(lat, lon) {
+  const apiUrl = typeof window !== "undefined" && typeof window.trueskyApiUrl === "function"
+    ? window.trueskyApiUrl(`/api/timezone?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`)
+    : `/api/timezone?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
+  try {
+    const response = await fetchWithTimeout(apiUrl, { headers: { Accept: "application/json" } }, 5000);
+    const data = await response.json();
+    if (response.ok && data?.timezone && isValidTimeZone(data.timezone)) return data.timezone;
+  } catch {
+    // Try the public provider below when the local proxy is unavailable.
+  }
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m&timezone=auto`;
+  const response = await fetchWithTimeout(url, { headers: { Accept: "application/json" } }, 7000);
+  if (!response.ok) throw new Error(`Time-zone lookup failed (${response.status}).`);
+  const data = await response.json();
+  if (!data.timezone || !isValidTimeZone(data.timezone)) {
+    throw new Error("No time zone found for these coordinates.");
+  }
+  return data.timezone;
+}
+
 function getGeoCache() {
   try {
     const parsed = JSON.parse(localStorage.getItem("trueSky.locationGeoCache.v1") || "{}");
@@ -545,9 +566,19 @@ export async function prepareSwissRequest(request, form = null) {
   const formTimezone = String(
     form?.querySelector('[name="timezone"]')?.value || payload.timezone || "",
   ).trim();
-  const selectedTimezone = customCoordinates
+  let selectedTimezone = customCoordinates
     ? (formTimezone || (sameLocationAsNatal ? natal.timezone : ""))
     : (city?.timezone || formTimezone || (sameLocationAsNatal ? natal.timezone : ""));
+  const mode =
+    payload.utcMode ||
+    form?.querySelector('[name="utcMode"]')?.value ||
+    (selectedTimezone || city ? "auto" : "manual");
+  if (mode !== "manual" && customCoordinates && !selectedTimezone) {
+    selectedTimezone = await lookupTimezoneForCoordinates(
+      Number(customCoordinates.lat),
+      Number(customCoordinates.long),
+    );
+  }
   if (selectedTimezone && !isValidTimeZone(selectedTimezone)) {
     throw new Error(`Unknown time zone: ${selectedTimezone}. Choose an IANA zone such as America/Sao_Paulo or use Manual UTC offset.`);
   }
@@ -586,10 +617,6 @@ export async function prepareSwissRequest(request, form = null) {
     throw new Error("Latitude must be -90..90 and longitude -180..180.");
   }
 
-  const mode =
-    payload.utcMode ||
-    form?.querySelector('[name="utcMode"]')?.value ||
-    (timezoneCity ? "auto" : "manual");
   let utcOffset;
   if (mode === "manual") {
     utcOffset = Number(
@@ -1212,6 +1239,29 @@ export function setupLocalLocationFields() {
     return fields.querySelector('[name="timezone"]');
   }
 
+  function ensureUtcOffsetOptions(fields) {
+    const input = fields.querySelector('input[name="utcOffset"]');
+    if (!input) return;
+    const select = document.createElement("select");
+    select.id = input.id;
+    select.name = input.name;
+    select.className = input.className;
+    select.disabled = input.disabled;
+    select.setAttribute("aria-label", input.getAttribute("aria-label") || "Manual UTC offset");
+    const currentValue = Number(input.value);
+    for (let quarterHours = -56; quarterHours <= 56; quarterHours += 1) {
+      const value = quarterHours / 4;
+      const option = document.createElement("option");
+      option.value = String(value);
+      option.textContent = formatUtcOffset(value);
+      select.appendChild(option);
+    }
+    select.value = Number.isFinite(currentValue) && currentValue >= -14 && currentValue <= 14
+      ? String(currentValue)
+      : "0";
+    input.replaceWith(select);
+  }
+
   function updateOffsetPreview(form, fields) {
     const mode = fields.querySelector('[name="utcMode"]')?.value || "auto";
     const timezone = getTimeZoneField(fields)?.value.trim();
@@ -1309,25 +1359,6 @@ export function setupLocalLocationFields() {
     } finally {
       submitButtons.forEach((button, index) => { button.disabled = priorDisabled[index]; });
     }
-  }
-
-  async function timezoneForCoordinates(lat, lon) {
-    const apiUrl = typeof window.trueskyApiUrl === "function"
-      ? window.trueskyApiUrl(`/api/timezone?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`)
-      : `/api/timezone?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
-    try {
-      const response = await fetchWithTimeout(apiUrl, { headers: { Accept: "application/json" } }, 5000);
-      const data = await response.json();
-      if (response.ok && data?.timezone && isValidTimeZone(data.timezone)) return data.timezone;
-    } catch {
-      // Older app deployments may not yet expose the proxy route.
-    }
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m&timezone=auto`;
-    const response = await fetchWithTimeout(url, { headers: { Accept: "application/json" } }, 7000);
-    if (!response.ok) throw new Error(`Time-zone lookup failed (${response.status}).`);
-    const data = await response.json();
-    if (!data.timezone || !isValidTimeZone(data.timezone)) throw new Error("No time zone found for these coordinates.");
-    return data.timezone;
   }
 
   function addCurrentLocationButton(form, fields, locationInput, activateCoordinateMode) {
@@ -1480,6 +1511,7 @@ export function setupLocalLocationFields() {
     const latitudeInput = fields.querySelector('[name="lat"]');
     const longitudeInput = fields.querySelector('[name="long"]');
     const utcMode = fields.querySelector('[name="utcMode"]');
+    ensureUtcOffsetOptions(fields);
     const utcOffset = fields.querySelector('[name="utcOffset"]');
     const utcHelp = fields.querySelector(".utc-mode-help");
     const timezoneInput = fields.querySelector('[name="timezone"]');
@@ -1516,18 +1548,14 @@ export function setupLocalLocationFields() {
       if (lookupTimezone && utcMode.value !== "manual") {
         try {
           // A previous city's time zone may no longer match the coordinates now in use.
-          const timezone = await timezoneForCoordinates(lat, longitude);
+          const timezone = await lookupTimezoneForCoordinates(lat, longitude);
           if (revision !== coordinateLookupRevision) return true;
           timezoneInput.value = timezone;
           timezoneInput.dispatchEvent(new Event("change", { bubbles: true }));
         } catch (_) {
           if (revision !== coordinateLookupRevision) return true;
-          const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          if (browserZone && isValidTimeZone(browserZone)) {
-            timezoneInput.value = browserZone;
-            timezoneInput.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-          setStatus(resolutionStatus, `Coordinates added to the location field. The exact time zone could not be detected automatically${browserZone ? `; the browser zone ${browserZone} was selected as a fallback` : ""}. Please verify the time zone.`, "warning");
+          timezoneInput.value = "";
+          setStatus(resolutionStatus, "Coordinates added, but the exact time zone could not be detected automatically. Choose an IANA time zone or switch to Manual UTC offset.", "warning");
           updateOffsetPreview(form, fields);
           return true;
         }

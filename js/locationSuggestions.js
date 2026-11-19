@@ -426,7 +426,19 @@
         const response = await fetch("/locations.json");
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
-        locations = await response.json();
+        const loadedLocations = await response.json();
+        if (!Array.isArray(loadedLocations)) {
+          throw new Error("Location catalog is invalid.");
+        }
+        // Some upstream locality sources contain the same city more than once.
+        // Keep the first occurrence so ranking remains stable without duplicates.
+        const seenLocations = new Set();
+        locations = loadedLocations.filter((location) => {
+          const key = normalizeForSearch(String(location));
+          if (!key || seenLocations.has(key)) return false;
+          seenLocations.add(key);
+          return true;
+        });
         buildLocationPrefixIndex(locations);
       } catch (error) {
         console.error("Error loading locations:", error);
