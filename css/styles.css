@@ -1064,6 +1064,50 @@ body::before {
   text-align: right;
 }
 
+.custom-ayanamsa-dms:not([hidden]) {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  justify-self: center;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 320px;
+}
+
+.custom-ayanamsa-dms-title {
+  text-align: center;
+}
+
+.custom-ayanamsa-dms-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.custom-ayanamsa-dms-fields > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+
+.custom-ayanamsa-dms-fields label {
+  font-size: 14px;
+}
+
+.custom-ayanamsa-dms-fields input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 16px;
+  text-align: center;
+}
+
+#customAyanamsaDmsGroup[hidden] {
+  display: none;
+}
+
 .ascendant-override select {
   width: 96px;
 }

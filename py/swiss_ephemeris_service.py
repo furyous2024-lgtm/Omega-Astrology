@@ -409,7 +409,7 @@ def resolve_ayanamsa(req, jd):
         if ayanamsa_name in ('ayanamsa personalizado', 'ayanamsa personalizado 1'):
             return true_sidereal_custom_ayanamsa(jd, parse_custom_ayanamsa(req))
         if ayanamsa_name == 'ayanamsa personalizado 2':
-            return 0.0
+            return parse_custom_ayanamsa(req)
         if ayanamsa_name == 'ayanamsa personalizado 3':
             return parse_bounded_ayanamsa(req, ('customAyanamsaDegreesValue',))
         if ayanamsa_name == 'ayanamsa personalizado 4':

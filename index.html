@@ -1328,11 +1328,11 @@
     Ayanamsa:
   </label>
   <select name="ayanamsaSystem">
-    <option value="Ayanamsa Personalizado 1">Ayanamsa Personalizado 1</option>
-    <option value="Ayanamsa Personalizado 2">Ayanamsa Personalizado 2</option>
-    <option value="Ayanamsa Personalizado 3">Ayanamsa Personalizado 3</option>
-    <option value="Ayanamsa Personalizado 4">Ayanamsa Personalizado 4</option>
-    <option value="Ayanamsa Personalizado 5">Ayanamsa Personalizado 5</option>
+    <option value="Ayanamsa Personalizado 1">J2000 (referência)</option>
+    <option value="Ayanamsa Personalizado 2">Valor fixo (°)</option>
+    <option value="Ayanamsa Personalizado 3">Graus livres (°)</option>
+    <option value="Ayanamsa Personalizado 4">Arco GMS</option>
+    <option value="Ayanamsa Personalizado 5">Data juliana</option>
     <option value="Tropical" selected>Tropical</option>
     <option value="J2000">J2000</option>
     <option value="Pistak 23/03/68A.C">Pistak 23/03/68A.C</option>
@@ -1391,7 +1391,7 @@
   </select>
 
   <label id="customAyanamsaLabel" class="type-icon" for="customAyanamsaValue" hidden>
-    Personalizado 1 — Valor J2000 (°):
+    Referência J2000 (°):
   </label>
   <input
     id="customAyanamsaValue"
@@ -1404,8 +1404,12 @@
     hidden
   />
 
+  <label id="customAyanamsaOffsetLabel" class="type-icon" for="customAyanamsaValue" hidden>
+    Valor do ayanamsa (°):
+  </label>
+
   <label id="customAyanamsaDegreesLabel" class="type-icon" for="customAyanamsaDegreesValue" hidden>
-    Personalizado 3 — Graus (+360 a -360):
+    Graus livres (°):
   </label>
   <input
     id="customAyanamsaDegreesValue"
@@ -1418,42 +1422,50 @@
     hidden
   />
 
-  <div id="customAyanamsaDmsGroup" hidden>
-    <label class="type-icon">Personalizado 4 — Graus, minutos e segundos de arco:</label>
-    <input
-      id="customAyanamsaDegrees"
-      name="customAyanamsaDegrees"
-      type="number"
-      min="-360"
-      max="360"
-      step="1"
-      value="0"
-      aria-label="Graus"
-    />
-    <input
-      id="customAyanamsaMinutes"
-      name="customAyanamsaMinutes"
-      type="number"
-      min="0"
-      max="59"
-      step="1"
-      value="0"
-      aria-label="Minutos"
-    />
-    <input
-      id="customAyanamsaSeconds"
-      name="customAyanamsaSeconds"
-      type="number"
-      min="0"
-      max="59.999999"
-      step="0.000001"
-      value="0"
-      aria-label="Segundos"
-    />
+  <div id="customAyanamsaDmsGroup" class="custom-ayanamsa-dms" hidden>
+    <span class="custom-ayanamsa-dms-title">Arco (graus, minutos e segundos)</span>
+    <div class="custom-ayanamsa-dms-fields">
+      <div>
+        <label for="customAyanamsaDegrees">Graus</label>
+        <input
+          id="customAyanamsaDegrees"
+          name="customAyanamsaDegrees"
+          type="number"
+          min="-360"
+          max="360"
+          step="1"
+          value="0"
+        />
+      </div>
+      <div>
+        <label for="customAyanamsaMinutes">Minutos</label>
+        <input
+          id="customAyanamsaMinutes"
+          name="customAyanamsaMinutes"
+          type="number"
+          min="0"
+          max="59"
+          step="1"
+          value="0"
+        />
+      </div>
+      <div>
+        <label for="customAyanamsaSeconds">Segundos</label>
+        <input
+          id="customAyanamsaSeconds"
+          name="customAyanamsaSeconds"
+          type="number"
+          min="0"
+          max="59.999999"
+          step="0.000001"
+          value="0"
+        />
+      </div>
+    </div>
   </div>
 
   <label id="customAyanamsaJulianLabel" class="type-icon" for="customAyanamsaJulianDate" hidden>
-    Personalizado 5 — Julian Date de referência:
+    Data juliana de referência:
   </label>
   <input
     id="customAyanamsaJulianDate"

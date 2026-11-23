@@ -68,14 +68,15 @@ if abs(custom_payload['ayanamsa'] - custom_expected) > 1e-10:
 if abs(custom_payload['ayanamsaValues']['Ayanamsa Personalizado'] - custom_payload['ayanamsa']) > 1e-10:
     raise SystemExit('Custom ayanamsa value was not returned in ayanamsa values')
 
-zero_payload = service.calculate_payload({
+custom2_payload = service.calculate_payload({
     'utcDate': '2000-01-01T12:00:00Z',
     'selectedAyanamsaSystem': 'Ayanamsa Personalizado 2',
+    'customAyanamsaValue': 24.25,
     'lat': 0,
     'long': 0,
 })
-if abs(zero_payload['ayanamsa']) > 1e-12:
-    raise SystemExit('Personalizado 2 must always return exactly 0 degrees')
+if abs(custom2_payload['ayanamsa'] - 24.25) > 1e-12:
+    raise SystemExit('Personalizado 2 did not use the entered ayanamsa value')
 
 degrees_payload = service.calculate_payload({
     'utcDate': '2000-01-01T12:00:00Z',

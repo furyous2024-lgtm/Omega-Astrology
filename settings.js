@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   const customLabel = document.getElementById("customAyanamsaLabel");
   const customInput = document.getElementById("customAyanamsaValue");
+  const customOffsetLabel = document.getElementById("customAyanamsaOffsetLabel");
   const customDegreesLabel = document.getElementById("customAyanamsaDegreesLabel");
   const customDegreesInput = document.getElementById("customAyanamsaDegreesValue");
   const customDmsGroup = document.getElementById("customAyanamsaDmsGroup");
@@ -62,8 +63,12 @@ document.addEventListener("DOMContentLoaded", function () {
     if (customLabel && customInput) {
       const isCustom1 = selected === "Ayanamsa Personalizado 1";
       customLabel.hidden = !isCustom1;
-      customInput.hidden = !isCustom1;
-      customInput.disabled = !isCustom1;
+      if (customOffsetLabel) {
+        customOffsetLabel.hidden = selected !== "Ayanamsa Personalizado 2";
+      }
+      const needsCustomValue = isCustom1 || selected === "Ayanamsa Personalizado 2";
+      customInput.hidden = !needsCustomValue;
+      customInput.disabled = !needsCustomValue;
     }
     if (customDegreesLabel && customDegreesInput) {
       const isCustom3 = selected === "Ayanamsa Personalizado 3";
