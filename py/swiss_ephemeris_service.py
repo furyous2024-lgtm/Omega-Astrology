@@ -168,9 +168,19 @@ AYANAMSA_MODES = {
     'lahiri icrc': ('Lahiri ICRC', swe.SIDM_LAHIRI_ICRC),
 }
 
-TRUE_SIDEREAL_M_MIDPOINT_NAME = 'TRUE SIDEREAL-M Midpoint'
-TRUE_SIDEREAL_C_CHIMENTI_NAME = 'TRUE SIDEREAL-C Chimenti'
-TRUE_SIDEREAL_K_KANATAS_NAME = 'TRUE SIDEREAL-K Kanatas'
+MIDPOINT_NAME = 'Midpoint'
+CHIMENTI_NAME = 'Chimenti'
+KANATAS_NAME = 'Kanatas'
+
+# J2000 reference offsets for the custom sidereal ayanamsas.
+MIDPOINT_J2000 = 31.2816
+CHIMENTI_J2000 = 31.2816
+KANATAS_J2000 = 28.5
+
+# Backward compatibility for profiles saved with the previous option names.
+MIDPOINT_LEGACY_NAMES = ('true sidereal-m midpoint',)
+CHIMENTI_LEGACY_NAMES = ('true sidereal-c chimenti',)
+KANATAS_LEGACY_NAMES = ('true sidereal-k kanatas',)
 
 def current_ayanamsa_values(now_jd=None):
     if now_jd is None:
@@ -183,10 +193,9 @@ def current_ayanamsa_values(now_jd=None):
 
     values[PISTAK_0_ARIES_60_NAME] = pistak_0_aries_60_ayanamsa(now_jd)
     values[PISTAK_23_03_68_BC_NAME] = pistak_23_03_68_bc_ayanamsa(now_jd)
-    swe.set_sid_mode(swe.SIDM_TRUE_MULA)
-    values[TRUE_SIDEREAL_M_MIDPOINT_NAME] = signed_angle(swe.get_ayanamsa_ut(now_jd))
-    values[TRUE_SIDEREAL_C_CHIMENTI_NAME] = true_sidereal_custom_ayanamsa(now_jd, 28.0)
-    values[TRUE_SIDEREAL_K_KANATAS_NAME] = true_sidereal_custom_ayanamsa(now_jd, 28.5)
+    values[MIDPOINT_NAME] = true_sidereal_custom_ayanamsa(now_jd, MIDPOINT_J2000)
+    values[CHIMENTI_NAME] = true_sidereal_custom_ayanamsa(now_jd, CHIMENTI_J2000)
+    values[KANATAS_NAME] = true_sidereal_custom_ayanamsa(now_jd, KANATAS_J2000)
     return values
 
 def kepler_solve(M_rad, e):
@@ -329,13 +338,12 @@ def resolve_ayanamsa(req, jd):
             return pistak_0_aries_60_ayanamsa(jd)
         if ayanamsa_name == PISTAK_23_03_68_BC_KEY:
             return pistak_23_03_68_bc_ayanamsa(jd)
-        if ayanamsa_name == TRUE_SIDEREAL_M_MIDPOINT_NAME.lower():
-            swe.set_sid_mode(swe.SIDM_TRUE_MULA)
-            return signed_angle(swe.get_ayanamsa_ut(jd))
-        if ayanamsa_name == TRUE_SIDEREAL_C_CHIMENTI_NAME.lower():
-            return true_sidereal_custom_ayanamsa(jd, 28.0)
-        if ayanamsa_name == TRUE_SIDEREAL_K_KANATAS_NAME.lower():
-            return true_sidereal_custom_ayanamsa(jd, 28.5)
+        if ayanamsa_name == MIDPOINT_NAME.lower() or ayanamsa_name in MIDPOINT_LEGACY_NAMES:
+            return true_sidereal_custom_ayanamsa(jd, MIDPOINT_J2000)
+        if ayanamsa_name == CHIMENTI_NAME.lower() or ayanamsa_name in CHIMENTI_LEGACY_NAMES:
+            return true_sidereal_custom_ayanamsa(jd, CHIMENTI_J2000)
+        if ayanamsa_name == KANATAS_NAME.lower() or ayanamsa_name in KANATAS_LEGACY_NAMES:
+            return true_sidereal_custom_ayanamsa(jd, KANATAS_J2000)
         mode = AYANAMSA_MODES.get(ayanamsa_name)
         if mode is None:
             raise ValueError(f'Unsupported ayanamsa system: {selected_ayanamsa}')

@@ -1350,6 +1350,15 @@ function loadSettingsIntoForm(settings) {
     ? savedZodiac
     : "Tropical";
   let ayanamsaValue = savedSystemSettings.ayanamsaSystem;
+  if (ayanamsaValue === "TRUE SIDEREAL-M Midpoint") {
+    ayanamsaValue = "Midpoint";
+  }
+  if (ayanamsaValue === "TRUE SIDEREAL-C Chimenti") {
+    ayanamsaValue = "Chimenti";
+  }
+  if (ayanamsaValue === "TRUE SIDEREAL-K Kanatas") {
+    ayanamsaValue = "Kanatas";
+  }
   if (ayanamsaValue === "Pistak 0 Áries 60 d.C.") {
     ayanamsaValue = "Pistak 22/03/60D.C";
   }
