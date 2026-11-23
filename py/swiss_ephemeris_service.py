@@ -94,8 +94,9 @@ def norm(x): return x % 360.0
 
 def signed_angle(x): return (x + 180.0) % 360.0 - 180.0
 
-PISTAK_0_ARIES_60_NAME = 'Pistak 0 Áries 60 d.C.'
+PISTAK_0_ARIES_60_NAME = 'Pistak 22/03/60D.C'
 PISTAK_0_ARIES_60_KEY = PISTAK_0_ARIES_60_NAME.lower()
+PISTAK_0_ARIES_60_LEGACY_KEY = 'pistak 0 áries 60 d.c.'
 # DE441 reference event; SIDM_USER expects its reference epoch in TT.
 PISTAK_0_ARIES_60_JD_TT = 1743053.8180430592
 
@@ -311,7 +312,7 @@ def resolve_ayanamsa(req, jd):
         ayanamsa_name = selected_ayanamsa.lower()
         if ayanamsa_name in ('tropical', 'none'):
             return 0.0
-        if ayanamsa_name == PISTAK_0_ARIES_60_KEY:
+        if ayanamsa_name in (PISTAK_0_ARIES_60_KEY, PISTAK_0_ARIES_60_LEGACY_KEY):
             return pistak_0_aries_60_ayanamsa(jd)
         if ayanamsa_name == PISTAK_23_03_68_BC_KEY:
             return pistak_23_03_68_bc_ayanamsa(jd)
@@ -327,7 +328,7 @@ def resolve_ayanamsa(req, jd):
         return signed_angle(swe.get_ayanamsa_ut(jd))
     if zodiac == 'iau real constellations':
         return 0.0
-    if zodiac == PISTAK_0_ARIES_60_KEY:
+    if zodiac in (PISTAK_0_ARIES_60_KEY, PISTAK_0_ARIES_60_LEGACY_KEY):
         return pistak_0_aries_60_ayanamsa(jd)
     if zodiac == PISTAK_23_03_68_BC_KEY:
         return pistak_23_03_68_bc_ayanamsa(jd)

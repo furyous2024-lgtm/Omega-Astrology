@@ -1299,6 +1299,12 @@ function loadSettingsIntoForm(settings) {
     ? savedZodiac
     : "Tropical";
   let ayanamsaValue = savedSystemSettings.ayanamsaSystem;
+  if (ayanamsaValue === "Pistak 0 Áries 60 d.C.") {
+    ayanamsaValue = "Pistak 22/03/60D.C";
+  }
+  if (!ayanamsaValue && savedZodiac === "Pistak 0 Áries 60 d.C.") {
+    ayanamsaValue = "Pistak 22/03/60D.C";
+  }
   if (!ayanamsaValue && legacyAyanamsa) {
     ayanamsaValue = savedZodiac;
   } else if (!ayanamsaValue && savedZodiac === "13 Equal") {
