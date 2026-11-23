@@ -113,6 +113,11 @@ def pistak_23_03_68_bc_ayanamsa(jd_ut):
     swe.set_sid_mode(swe.SIDM_USER, PISTAK_23_03_68_BC_JD_TT, 0.0)
     return signed_angle(swe.get_ayanamsa_ut(jd_ut))
 
+def true_sidereal_custom_ayanamsa(jd_ut, ayanamsa_j2000):
+    # USER mode at J2000 with a 28-degree-class reference ayanamsa.
+    swe.set_sid_mode(swe.SIDM_USER, swe.julday(2000, 1, 1, 12.0), ayanamsa_j2000)
+    return signed_angle(swe.get_ayanamsa_ut(jd_ut))
+
 AYANAMSA_MODES = {
     'fagan/bradley': ('Fagan/Bradley', swe.SIDM_FAGAN_BRADLEY),
     'lahiri': ('Lahiri', swe.SIDM_LAHIRI),
@@ -163,6 +168,10 @@ AYANAMSA_MODES = {
     'lahiri icrc': ('Lahiri ICRC', swe.SIDM_LAHIRI_ICRC),
 }
 
+TRUE_SIDEREAL_M_MIDPOINT_NAME = 'TRUE SIDEREAL-M Midpoint'
+TRUE_SIDEREAL_C_CHIMENTI_NAME = 'TRUE SIDEREAL-C Chimenti'
+TRUE_SIDEREAL_K_KANATAS_NAME = 'TRUE SIDEREAL-K Kanatas'
+
 def current_ayanamsa_values(now_jd=None):
     if now_jd is None:
         now_jd = julday(datetime.datetime.now(datetime.timezone.utc))
@@ -174,6 +183,10 @@ def current_ayanamsa_values(now_jd=None):
 
     values[PISTAK_0_ARIES_60_NAME] = pistak_0_aries_60_ayanamsa(now_jd)
     values[PISTAK_23_03_68_BC_NAME] = pistak_23_03_68_bc_ayanamsa(now_jd)
+    swe.set_sid_mode(swe.SIDM_TRUE_MULA)
+    values[TRUE_SIDEREAL_M_MIDPOINT_NAME] = signed_angle(swe.get_ayanamsa_ut(now_jd))
+    values[TRUE_SIDEREAL_C_CHIMENTI_NAME] = true_sidereal_custom_ayanamsa(now_jd, 28.0)
+    values[TRUE_SIDEREAL_K_KANATAS_NAME] = true_sidereal_custom_ayanamsa(now_jd, 28.5)
     return values
 
 def kepler_solve(M_rad, e):
@@ -316,6 +329,13 @@ def resolve_ayanamsa(req, jd):
             return pistak_0_aries_60_ayanamsa(jd)
         if ayanamsa_name == PISTAK_23_03_68_BC_KEY:
             return pistak_23_03_68_bc_ayanamsa(jd)
+        if ayanamsa_name == TRUE_SIDEREAL_M_MIDPOINT_NAME.lower():
+            swe.set_sid_mode(swe.SIDM_TRUE_MULA)
+            return signed_angle(swe.get_ayanamsa_ut(jd))
+        if ayanamsa_name == TRUE_SIDEREAL_C_CHIMENTI_NAME.lower():
+            return true_sidereal_custom_ayanamsa(jd, 28.0)
+        if ayanamsa_name == TRUE_SIDEREAL_K_KANATAS_NAME.lower():
+            return true_sidereal_custom_ayanamsa(jd, 28.5)
         mode = AYANAMSA_MODES.get(ayanamsa_name)
         if mode is None:
             raise ValueError(f'Unsupported ayanamsa system: {selected_ayanamsa}')

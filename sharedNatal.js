@@ -2565,7 +2565,13 @@ export function sharedNatal(
             .attr("y", yMid - scaledSignSize / 2)
             .attr("width", scaledSignSize)
             .attr("height", scaledSignSize)
-            .attr("class", `natal${extraClass ? ` ${extraClass}` : ""}`);
+            .attr("class", `natal${extraClass ? ` ${extraClass}` : ""}`)
+            .style(
+              "filter",
+              signKey === "ophiuchus" && s === 1
+                ? "brightness(0) invert(1)"
+                : null,
+            );
         };
 
         // Outer wheel sign symbol
