@@ -119,6 +119,7 @@ def true_sidereal_custom_ayanamsa(jd_ut, ayanamsa_j2000):
     return signed_angle(swe.get_ayanamsa_ut(jd_ut))
 
 AYANAMSA_MODES = {
+    'ayanamsa personalizado': ('Ayanamsa Personalizado', swe.SIDM_J2000),
     'fagan/bradley': ('Fagan/Bradley', swe.SIDM_FAGAN_BRADLEY),
     'lahiri': ('Lahiri', swe.SIDM_LAHIRI),
     'deluce': ('DeLuce', swe.SIDM_DELUCE),
@@ -171,11 +172,17 @@ AYANAMSA_MODES = {
 MIDPOINT_NAME = 'Midpoint'
 CHIMENTI_NAME = 'Chimenti'
 KANATAS_NAME = 'Kanatas'
+SHERATAN_NAME = 'Sheratan'
+MESARTHIM_NAME = 'Mesarthim'
+ASHWINI_NAME = 'Ashwini / Beta Arietis a 0°'
 
 # J2000 reference offsets for the custom sidereal ayanamsas.
 MIDPOINT_J2000 = 31.2816
 CHIMENTI_J2000 = 31.2816
 KANATAS_J2000 = 28.5
+SHERATAN_J2000 = 34.28
+MESARTHIM_J2000 = 33.57
+ASHWINI_J2000 = 32.09
 
 # Backward compatibility for profiles saved with the previous option names.
 MIDPOINT_LEGACY_NAMES = ('true sidereal-m midpoint',)
@@ -196,6 +203,9 @@ def current_ayanamsa_values(now_jd=None):
     values[MIDPOINT_NAME] = true_sidereal_custom_ayanamsa(now_jd, MIDPOINT_J2000)
     values[CHIMENTI_NAME] = true_sidereal_custom_ayanamsa(now_jd, CHIMENTI_J2000)
     values[KANATAS_NAME] = true_sidereal_custom_ayanamsa(now_jd, KANATAS_J2000)
+    values[SHERATAN_NAME] = true_sidereal_custom_ayanamsa(now_jd, SHERATAN_J2000)
+    values[MESARTHIM_NAME] = true_sidereal_custom_ayanamsa(now_jd, MESARTHIM_J2000)
+    values[ASHWINI_NAME] = true_sidereal_custom_ayanamsa(now_jd, ASHWINI_J2000)
     return values
 
 def kepler_solve(M_rad, e):
@@ -344,6 +354,12 @@ def resolve_ayanamsa(req, jd):
             return true_sidereal_custom_ayanamsa(jd, CHIMENTI_J2000)
         if ayanamsa_name == KANATAS_NAME.lower() or ayanamsa_name in KANATAS_LEGACY_NAMES:
             return true_sidereal_custom_ayanamsa(jd, KANATAS_J2000)
+        if ayanamsa_name == SHERATAN_NAME.lower():
+            return true_sidereal_custom_ayanamsa(jd, SHERATAN_J2000)
+        if ayanamsa_name == MESARTHIM_NAME.lower():
+            return true_sidereal_custom_ayanamsa(jd, MESARTHIM_J2000)
+        if ayanamsa_name == ASHWINI_NAME.lower():
+            return true_sidereal_custom_ayanamsa(jd, ASHWINI_J2000)
         mode = AYANAMSA_MODES.get(ayanamsa_name)
         if mode is None:
             raise ValueError(f'Unsupported ayanamsa system: {selected_ayanamsa}')
