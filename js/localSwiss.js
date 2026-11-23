@@ -679,6 +679,21 @@ export async function prepareSwissRequest(request, form = null) {
     payload.selectedAyanamsaSystem ||
     natal.ayanamsaSystem ||
     "Tropical";
+  payload.customAyanamsaValue =
+    Number(document.getElementById("customAyanamsaValue")?.value ??
+      payload.customAyanamsaValue ??
+      natal.customAyanamsaValue ??
+      0);
+  payload.customAyanamsaDegreesValue =
+    Number(document.getElementById("customAyanamsaDegreesValue")?.value ?? 0);
+  payload.customAyanamsaDegrees =
+    Number(document.getElementById("customAyanamsaDegrees")?.value ?? 0);
+  payload.customAyanamsaMinutes =
+    Number(document.getElementById("customAyanamsaMinutes")?.value ?? 0);
+  payload.customAyanamsaSeconds =
+    Number(document.getElementById("customAyanamsaSeconds")?.value ?? 0);
+  payload.customAyanamsaJulianDate =
+    Number(document.getElementById("customAyanamsaJulianDate")?.value ?? 2451545);
   payload.selectedCoordinateSystem =
     payload.selectedCoordinateSystem || natal.coordinateSystem || "Geocentric";
   payload.trueNodes =
@@ -1124,6 +1139,7 @@ async function chartDataFromSwiss(result, request) {
     zodiacSystem,
     ...(zodiacBoundaries ? { zodiacBoundaries } : {}),
     ayanamsaSystem: request.selectedAyanamsaSystem || "Tropical",
+    customAyanamsaValue: request.customAyanamsaValue,
     houseSystem: request.selectedHouseSystem || "Placidus",
     coordinateSystem: request.selectedCoordinateSystem || "Geocentric",
   };

@@ -1328,7 +1328,11 @@
     Ayanamsa:
   </label>
   <select name="ayanamsaSystem">
-    <option value="Ayanamsa Personalizado">Ayanamsa Personalizado</option>
+    <option value="Ayanamsa Personalizado 1">Ayanamsa Personalizado 1</option>
+    <option value="Ayanamsa Personalizado 2">Ayanamsa Personalizado 2</option>
+    <option value="Ayanamsa Personalizado 3">Ayanamsa Personalizado 3</option>
+    <option value="Ayanamsa Personalizado 4">Ayanamsa Personalizado 4</option>
+    <option value="Ayanamsa Personalizado 5">Ayanamsa Personalizado 5</option>
     <option value="Tropical" selected>Tropical</option>
     <option value="J2000">J2000</option>
     <option value="Pistak 23/03/68A.C">Pistak 23/03/68A.C</option>
@@ -1385,6 +1389,80 @@
     <option value="Mesarthim">Mesarthim — Gamma Arietis (33,57°)</option>
     <option value="Ashwini / Beta Arietis a 0°">Ashwini / Beta Arietis a 0° (32,09°)</option>
   </select>
+
+  <label id="customAyanamsaLabel" class="type-icon" for="customAyanamsaValue" hidden>
+    Personalizado 1 — Valor J2000 (°):
+  </label>
+  <input
+    id="customAyanamsaValue"
+    name="customAyanamsaValue"
+    type="number"
+    min="-360"
+    max="360"
+    step="0.01"
+    value="0"
+    hidden
+  />
+
+  <label id="customAyanamsaDegreesLabel" class="type-icon" for="customAyanamsaDegreesValue" hidden>
+    Personalizado 3 — Graus (+360 a -360):
+  </label>
+  <input
+    id="customAyanamsaDegreesValue"
+    name="customAyanamsaDegreesValue"
+    type="number"
+    min="-360"
+    max="360"
+    step="0.000001"
+    value="0"
+    hidden
+  />
+
+  <div id="customAyanamsaDmsGroup" hidden>
+    <label class="type-icon">Personalizado 4 — Graus, minutos e segundos de arco:</label>
+    <input
+      id="customAyanamsaDegrees"
+      name="customAyanamsaDegrees"
+      type="number"
+      min="-360"
+      max="360"
+      step="1"
+      value="0"
+      aria-label="Graus"
+    />
+    <input
+      id="customAyanamsaMinutes"
+      name="customAyanamsaMinutes"
+      type="number"
+      min="0"
+      max="59"
+      step="1"
+      value="0"
+      aria-label="Minutos"
+    />
+    <input
+      id="customAyanamsaSeconds"
+      name="customAyanamsaSeconds"
+      type="number"
+      min="0"
+      max="59.999999"
+      step="0.000001"
+      value="0"
+      aria-label="Segundos"
+    />
+  </div>
+
+  <label id="customAyanamsaJulianLabel" class="type-icon" for="customAyanamsaJulianDate" hidden>
+    Personalizado 5 — Julian Date de referência:
+  </label>
+  <input
+    id="customAyanamsaJulianDate"
+    name="customAyanamsaJulianDate"
+    type="number"
+    step="0.0000001"
+    value="2451545"
+    hidden
+  />
 
   <label class="type-icon">
     House:

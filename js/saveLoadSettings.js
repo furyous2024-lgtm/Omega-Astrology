@@ -1350,6 +1350,9 @@ function loadSettingsIntoForm(settings) {
     ? savedZodiac
     : "Tropical";
   let ayanamsaValue = savedSystemSettings.ayanamsaSystem;
+  if (ayanamsaValue === "Ayanamsa Personalizado") {
+    ayanamsaValue = "Ayanamsa Personalizado 1";
+  }
   if (ayanamsaValue === "TRUE SIDEREAL-M Midpoint") {
     ayanamsaValue = "Midpoint";
   }
@@ -1379,6 +1382,35 @@ function loadSettingsIntoForm(settings) {
       ? ayanamsaValue
       : "Tropical";
   }
+  const customAyanamsaInput = document.getElementById("customAyanamsaValue");
+  if (customAyanamsaInput) {
+    const savedCustomValue = Number(savedSystemSettings.customAyanamsaValue);
+    customAyanamsaInput.value = Number.isFinite(savedCustomValue)
+      ? String(savedCustomValue)
+      : "0";
+  }
+  const customDegreesInput = document.getElementById("customAyanamsaDegreesValue");
+  if (customDegreesInput) {
+    const value = Number(savedSystemSettings.customAyanamsaDegreesValue);
+    customDegreesInput.value = Number.isFinite(value) ? String(value) : "0";
+  }
+  for (const [id, field, fallback] of [
+    ["customAyanamsaDegrees", "customAyanamsaDegrees", "0"],
+    ["customAyanamsaMinutes", "customAyanamsaMinutes", "0"],
+    ["customAyanamsaSeconds", "customAyanamsaSeconds", "0"],
+  ]) {
+    const input = document.getElementById(id);
+    if (input) {
+      const value = Number(savedSystemSettings[field]);
+      input.value = Number.isFinite(value) ? String(value) : fallback;
+    }
+  }
+  const customJulianInput = document.getElementById("customAyanamsaJulianDate");
+  if (customJulianInput) {
+    const value = Number(savedSystemSettings.customAyanamsaJulianDate);
+    customJulianInput.value = Number.isFinite(value) ? String(value) : "2451545";
+  }
+  window.syncCustomAyanamsaField?.();
   const houseSelect = document.querySelector(`select[name="houseSystem"]`);
   if (houseSelect) {
     const houseValue = savedSystemSettings.houseSystem || "Placidus";
@@ -1747,6 +1779,12 @@ function getSettingsData() {
       ayanamsaSystem: document.querySelector(
         'select[name="ayanamsaSystem"]',
       ).value,
+      customAyanamsaValue: Number(document.getElementById("customAyanamsaValue")?.value || 0),
+      customAyanamsaDegreesValue: Number(document.getElementById("customAyanamsaDegreesValue")?.value || 0),
+      customAyanamsaDegrees: Number(document.getElementById("customAyanamsaDegrees")?.value || 0),
+      customAyanamsaMinutes: Number(document.getElementById("customAyanamsaMinutes")?.value || 0),
+      customAyanamsaSeconds: Number(document.getElementById("customAyanamsaSeconds")?.value || 0),
+      customAyanamsaJulianDate: Number(document.getElementById("customAyanamsaJulianDate")?.value || 2451545),
       houseSystem: document.querySelector('select[name="houseSystem"]').value,
       coordinateSystem: document.querySelector(
         'select[name="coordinateSystem"]',
@@ -2157,6 +2195,17 @@ function resetFormToDefaults() {
   // Reset system settings to default values (first option is default)
   document.querySelector('select[name="zodiacSystem"]').value = "Tropical";
   document.querySelector('select[name="ayanamsaSystem"]').value = "Tropical";
+  const customAyanamsaInput = document.getElementById("customAyanamsaValue");
+  if (customAyanamsaInput) customAyanamsaInput.value = "0";
+  const customDegreesInput = document.getElementById("customAyanamsaDegreesValue");
+  if (customDegreesInput) customDegreesInput.value = "0";
+  for (const id of ["customAyanamsaDegrees", "customAyanamsaMinutes", "customAyanamsaSeconds"]) {
+    const input = document.getElementById(id);
+    if (input) input.value = "0";
+  }
+  const customJulianInput = document.getElementById("customAyanamsaJulianDate");
+  if (customJulianInput) customJulianInput.value = "2451545";
+  window.syncCustomAyanamsaField?.();
   document.querySelector('select[name="houseSystem"]').value = "Placidus";
   document.querySelector('select[name="coordinateSystem"]').value =
     "Geocentric";

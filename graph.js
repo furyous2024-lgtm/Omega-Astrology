@@ -450,6 +450,9 @@ document.getElementById("graphForm").addEventListener("submit", async function (
   const selectedAyanamsaSystem = document.querySelector(
     '#system-settings select[name="ayanamsaSystem"]'
   ).value;
+  const customAyanamsaValue = Number(
+    document.getElementById("customAyanamsaValue")?.value || 0
+  );
   const selectedHouseSystem = document.querySelector(
     '#system-settings select[name="houseSystem"]'
   ).value;
@@ -484,6 +487,7 @@ document.getElementById("graphForm").addEventListener("submit", async function (
   );
   combinedData.selectedZodiacSystem = selectedZodiacSystem;
   combinedData.selectedAyanamsaSystem = selectedAyanamsaSystem;
+  combinedData.customAyanamsaValue = customAyanamsaValue;
   combinedData.selectedHouseSystem = selectedHouseSystem;
   combinedData.selectedCoordinateSystem = selectedCoordinateSystem;
   combinedData.draconic = selectedDraconic;

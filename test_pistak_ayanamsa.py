@@ -52,4 +52,66 @@ expected = service.resolve_ayanamsa(
 if abs(payload['ayanamsa'] - expected) > 1e-10:
     raise SystemExit('Chart calculation did not use the selected ayanamsa')
 
-print('Pistak 68 BC reference, precession, selection, and legacy option passed.')
+custom_payload = service.calculate_payload({
+    'utcDate': '2000-01-01T12:00:00Z',
+    'selectedAyanamsaSystem': 'Ayanamsa Personalizado',
+    'customAyanamsaValue': 24.25,
+    'lat': 0,
+    'long': 0,
+})
+custom_expected = service.true_sidereal_custom_ayanamsa(
+    custom_payload['julianDay'],
+    24.25,
+)
+if abs(custom_payload['ayanamsa'] - custom_expected) > 1e-10:
+    raise SystemExit('Chart calculation did not use the custom ayanamsa value')
+if abs(custom_payload['ayanamsaValues']['Ayanamsa Personalizado'] - custom_payload['ayanamsa']) > 1e-10:
+    raise SystemExit('Custom ayanamsa value was not returned in ayanamsa values')
+
+zero_payload = service.calculate_payload({
+    'utcDate': '2000-01-01T12:00:00Z',
+    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 2',
+    'lat': 0,
+    'long': 0,
+})
+if abs(zero_payload['ayanamsa']) > 1e-12:
+    raise SystemExit('Personalizado 2 must always return exactly 0 degrees')
+
+degrees_payload = service.calculate_payload({
+    'utcDate': '2000-01-01T12:00:00Z',
+    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 3',
+    'customAyanamsaDegreesValue': -123.25,
+    'lat': 0,
+    'long': 0,
+})
+if abs(degrees_payload['ayanamsa'] - (-123.25)) > 1e-12:
+    raise SystemExit('Personalizado 3 did not use the entered signed degree value')
+
+dms_payload = service.calculate_payload({
+    'utcDate': '2000-01-01T12:00:00Z',
+    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 4',
+    'customAyanamsaDegrees': -12,
+    'customAyanamsaMinutes': 30,
+    'customAyanamsaSeconds': 15,
+    'lat': 0,
+    'long': 0,
+})
+expected_dms = -(12 + 30 / 60.0 + 15 / 3600.0)
+if abs(dms_payload['ayanamsa'] - expected_dms) > 1e-12:
+    raise SystemExit('Personalizado 4 did not convert DMS correctly')
+
+julian_payload = service.calculate_payload({
+    'utcDate': '2000-01-01T12:00:00Z',
+    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 5',
+    'customAyanamsaJulianDate': 2451545.0,
+    'lat': 0,
+    'long': 0,
+})
+expected_julian = service.julian_date_ayanamsa(
+    julian_payload['julianDay'],
+    2451545.0,
+)
+if abs(julian_payload['ayanamsa'] - expected_julian) > 1e-12:
+    raise SystemExit('Personalizado 5 did not use the entered Julian Date')
+
+print('Pistak 68 BC reference, precession, selection, custom value, and legacy option passed.')

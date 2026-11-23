@@ -1057,6 +1057,13 @@ body::before {
   font-size: 16px;
 }
 
+.system-settings input[name="customAyanamsaValue"] {
+  width: 110px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 16px;
+  text-align: right;
+}
+
 .ascendant-override select {
   width: 96px;
 }

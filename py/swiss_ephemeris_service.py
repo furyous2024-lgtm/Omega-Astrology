@@ -118,6 +118,58 @@ def true_sidereal_custom_ayanamsa(jd_ut, ayanamsa_j2000):
     swe.set_sid_mode(swe.SIDM_USER, swe.julday(2000, 1, 1, 12.0), ayanamsa_j2000)
     return signed_angle(swe.get_ayanamsa_ut(jd_ut))
 
+def parse_custom_ayanamsa(req):
+    raw_value = req.get('customAyanamsaValue')
+    if raw_value is None:
+        raw_value = req.get('selectedCustomAyanamsaValue')
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(value):
+        return 0.0
+    return max(-360.0, min(360.0, value))
+
+def parse_bounded_ayanamsa(req, field_names):
+    raw_value = None
+    for field_name in field_names:
+        raw_value = req.get(field_name)
+        if raw_value is not None:
+            break
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(value):
+        return 0.0
+    return signed_angle(max(-360.0, min(360.0, value)))
+
+def parse_custom_ayanamsa_dms(req):
+    try:
+        degrees = float(req.get('customAyanamsaDegrees', 0))
+        minutes = float(req.get('customAyanamsaMinutes', 0))
+        seconds = float(req.get('customAyanamsaSeconds', 0))
+    except (TypeError, ValueError):
+        return 0.0
+    if not all(math.isfinite(value) for value in (degrees, minutes, seconds)):
+        return 0.0
+    degrees = max(-360.0, min(360.0, degrees))
+    minutes = max(0.0, min(59.999999, minutes))
+    seconds = max(0.0, min(59.999999, seconds))
+    sign = -1.0 if degrees < 0 else 1.0
+    value = sign * (abs(degrees) + minutes / 60.0 + seconds / 3600.0)
+    return signed_angle(max(-360.0, min(360.0, value)))
+
+def julian_date_ayanamsa(jd_ut, reference_jd_tt):
+    try:
+        reference = float(reference_jd_tt)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(reference):
+        return 0.0
+    swe.set_sid_mode(swe.SIDM_USER, reference, 0.0)
+    return signed_angle(swe.get_ayanamsa_ut(jd_ut))
+
 AYANAMSA_MODES = {
     'ayanamsa personalizado': ('Ayanamsa Personalizado', swe.SIDM_J2000),
     'fagan/bradley': ('Fagan/Bradley', swe.SIDM_FAGAN_BRADLEY),
@@ -175,6 +227,11 @@ KANATAS_NAME = 'Kanatas'
 SHERATAN_NAME = 'Sheratan'
 MESARTHIM_NAME = 'Mesarthim'
 ASHWINI_NAME = 'Ashwini / Beta Arietis a 0°'
+CUSTOM_AYANAMSA_1_NAME = 'Ayanamsa Personalizado 1'
+CUSTOM_AYANAMSA_2_NAME = 'Ayanamsa Personalizado 2'
+CUSTOM_AYANAMSA_3_NAME = 'Ayanamsa Personalizado 3'
+CUSTOM_AYANAMSA_4_NAME = 'Ayanamsa Personalizado 4'
+CUSTOM_AYANAMSA_5_NAME = 'Ayanamsa Personalizado 5'
 
 # J2000 reference offsets for the custom sidereal ayanamsas.
 MIDPOINT_J2000 = 31.2816
@@ -206,6 +263,11 @@ def current_ayanamsa_values(now_jd=None):
     values[SHERATAN_NAME] = true_sidereal_custom_ayanamsa(now_jd, SHERATAN_J2000)
     values[MESARTHIM_NAME] = true_sidereal_custom_ayanamsa(now_jd, MESARTHIM_J2000)
     values[ASHWINI_NAME] = true_sidereal_custom_ayanamsa(now_jd, ASHWINI_J2000)
+    values[CUSTOM_AYANAMSA_1_NAME] = true_sidereal_custom_ayanamsa(now_jd, 0.0)
+    values[CUSTOM_AYANAMSA_2_NAME] = 0.0
+    values[CUSTOM_AYANAMSA_3_NAME] = 0.0
+    values[CUSTOM_AYANAMSA_4_NAME] = 0.0
+    values[CUSTOM_AYANAMSA_5_NAME] = julian_date_ayanamsa(now_jd, swe.julday(2000, 1, 1, 12.0))
     return values
 
 def kepler_solve(M_rad, e):
@@ -344,6 +406,19 @@ def resolve_ayanamsa(req, jd):
         ayanamsa_name = selected_ayanamsa.lower()
         if ayanamsa_name in ('tropical', 'none'):
             return 0.0
+        if ayanamsa_name in ('ayanamsa personalizado', 'ayanamsa personalizado 1'):
+            return true_sidereal_custom_ayanamsa(jd, parse_custom_ayanamsa(req))
+        if ayanamsa_name == 'ayanamsa personalizado 2':
+            return 0.0
+        if ayanamsa_name == 'ayanamsa personalizado 3':
+            return parse_bounded_ayanamsa(req, ('customAyanamsaDegreesValue',))
+        if ayanamsa_name == 'ayanamsa personalizado 4':
+            return parse_custom_ayanamsa_dms(req)
+        if ayanamsa_name == 'ayanamsa personalizado 5':
+            reference_jd = req.get('customAyanamsaJulianDate')
+            if reference_jd is None:
+                reference_jd = swe.julday(2000, 1, 1, 12.0)
+            return julian_date_ayanamsa(jd, reference_jd)
         if ayanamsa_name in (PISTAK_0_ARIES_60_KEY, PISTAK_0_ARIES_60_LEGACY_KEY):
             return pistak_0_aries_60_ayanamsa(jd)
         if ayanamsa_name == PISTAK_23_03_68_BC_KEY:
@@ -412,6 +487,19 @@ def calculate_payload(req):
     )[:1].encode('ascii', 'ignore') or b'P'
 
     out = {"success": True, "engine": "Swiss Ephemeris / pyswisseph", "julianDay": jd, "ayanamsa": ayan, "ayanamsaValues": current_ayanamsa_values(jd), "positions": {}, "houseCusps": [], "fixedStars": []}
+    selected_name = str(req.get('selectedAyanamsaSystem') or req.get('ayanamsaSystem') or '').strip()
+    selected_lower = selected_name.lower()
+    if selected_lower in ('ayanamsa personalizado', 'ayanamsa personalizado 1'):
+        out["ayanamsaValues"]["Ayanamsa Personalizado"] = ayan
+        out["ayanamsaValues"][CUSTOM_AYANAMSA_1_NAME] = ayan
+    elif selected_lower == 'ayanamsa personalizado 2':
+        out["ayanamsaValues"][CUSTOM_AYANAMSA_2_NAME] = ayan
+    elif selected_lower == 'ayanamsa personalizado 3':
+        out["ayanamsaValues"][CUSTOM_AYANAMSA_3_NAME] = ayan
+    elif selected_lower == 'ayanamsa personalizado 4':
+        out["ayanamsaValues"][CUSTOM_AYANAMSA_4_NAME] = ayan
+    elif selected_lower == 'ayanamsa personalizado 5':
+        out["ayanamsaValues"][CUSTOM_AYANAMSA_5_NAME] = ayan
 
     bodies = {
         'Sun': swe.SUN, 'Moon': swe.MOON, 'Mercury': swe.MERCURY, 'Venus': swe.VENUS,
