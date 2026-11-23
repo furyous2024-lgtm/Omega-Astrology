@@ -1,1 +1,23 @@
-[]
+[
+  {"num":1,"name":"Ceres"},
+  {"num":2,"name":"Pallas"},
+  {"num":3,"name":"Juno"},
+  {"num":4,"name":"Vesta"},
+  {"num":10,"name":"Hygiea"},
+  {"num":15,"name":"Eunomia"},
+  {"num":16,"name":"Psyche"},
+  {"num":29,"name":"Amphitrite"},
+  {"num":52,"name":"Europa"},
+  {"num":65,"name":"Cybele"},
+  {"num":87,"name":"Sylvia"},
+  {"num":113,"name":"Amalthea"},
+  {"num":511,"name":"Davida"},
+  {"num":704,"name":"Interamnia"},
+  {"num":944,"name":"Hidalgo"},
+  {"num":1641,"name":"Tana"},
+  {"num":2060,"name":"Chiron"},
+  {"num":433,"name":"Eros"},
+  {"num":1866,"name":"Sisyphus"},
+  {"num":2212,"name":"Hephaistos"},
+  {"num":3200,"name":"Phaethon"}
+]

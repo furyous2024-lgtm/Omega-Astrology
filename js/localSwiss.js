@@ -685,6 +685,28 @@ export async function prepareSwissRequest(request, form = null) {
     payload.trueNodes ?? natal.trueNodes ?? true;
   payload.trueLilith =
     payload.trueLilith ?? natal.trueLilith ?? false;
+  payload.draconic =
+    payload.draconic ??
+    document
+      ?.querySelector('.degree-settings input[name="draconic"]')
+      ?.checked ??
+    false;
+  payload.ascendantOverride =
+    payload.ascendantOverride ??
+    document?.getElementById("ascendantOverride")?.value ??
+    "Normal";
+  payload.fixedStars =
+    payload.fixedStars ??
+    document?.querySelector('input[name="fixedStars"]')?.checked ??
+    false;
+  payload.fixedStarsMagnitude =
+    payload.fixedStarsMagnitude ??
+    parseFloat(document?.querySelector('select[name="fixedStarsMagnitude"]')?.value) ??
+    2.0;
+  payload.fixedStarsLatitude =
+    payload.fixedStarsLatitude ??
+    parseFloat(document?.querySelector('select[name="fixedStarsLatitude"]')?.value) ??
+    30.0;
   return payload;
 }
 
@@ -1126,6 +1148,14 @@ async function chartDataFromSwiss(result, request) {
       retrograde: value.retrograde ?? (Number(value.speed) < 0),
       speed: value.speed,
       source: value.source || "Swiss Ephemeris",
+      ...(value.isCustomPoint === true
+        ? {
+            isCustomPoint: true,
+            asteroidNum: value.asteroidNum,
+            asteroidName: value.asteroidName,
+            displayLabel: value.displayLabel,
+          }
+        : {}),
     };
     data.push(planet);
     if (name === "Ascendant Symbol") {

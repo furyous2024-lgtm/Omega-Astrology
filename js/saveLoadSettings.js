@@ -1114,6 +1114,48 @@ async function deleteSetting(setting) {
 
 // Load settings into the form
 function loadSettingsIntoForm(settings) {
+  // Always establish a complete known baseline before applying a preset.
+  // This prevents controls omitted by older/incomplete presets from leaking
+  // values from the previously selected preset.
+  resetFormToDefaults();
+  settings = settings && typeof settings === "object" ? settings : {};
+  settings.wheelSettings =
+    settings.wheelSettings && typeof settings.wheelSettings === "object"
+      ? settings.wheelSettings
+      : {};
+  settings.wheelSettings.planets =
+    settings.wheelSettings.planets && typeof settings.wheelSettings.planets === "object"
+      ? settings.wheelSettings.planets
+      : {};
+  settings.aspectSettings =
+    settings.aspectSettings && typeof settings.aspectSettings === "object"
+      ? settings.aspectSettings
+      : {};
+  settings.aspectSettings.aspects =
+    settings.aspectSettings.aspects && typeof settings.aspectSettings.aspects === "object"
+      ? settings.aspectSettings.aspects
+      : {};
+  settings.systemSettings =
+    settings.systemSettings && typeof settings.systemSettings === "object"
+      ? settings.systemSettings
+      : {};
+  settings.graphSettings =
+    settings.graphSettings && typeof settings.graphSettings === "object"
+      ? settings.graphSettings
+      : {};
+  settings.graphSettings.planetSettings =
+    settings.graphSettings.planetSettings && typeof settings.graphSettings.planetSettings === "object"
+      ? settings.graphSettings.planetSettings
+      : {};
+  settings.graphSettings.graphAspectSettings =
+    settings.graphSettings.graphAspectSettings && typeof settings.graphSettings.graphAspectSettings === "object"
+      ? settings.graphSettings.graphAspectSettings
+      : {};
+  settings.graphSettings.graphTypeSettings =
+    settings.graphSettings.graphTypeSettings && typeof settings.graphSettings.graphTypeSettings === "object"
+      ? settings.graphSettings.graphTypeSettings
+      : {};
+
   // Load wheel settings for planets
   for (const planet in settings.wheelSettings.planets) {
     const displayCheckbox = document.querySelector(
@@ -1162,7 +1204,10 @@ function loadSettingsIntoForm(settings) {
   // Load the degrees setting
   const degreesCheckbox = document.querySelector('input[name="degrees"]');
   if (degreesCheckbox) {
-    degreesCheckbox.checked = settings.wheelSettings.degrees;
+    degreesCheckbox.checked =
+      settings.wheelSettings.degrees !== undefined
+        ? settings.wheelSettings.degrees === true
+        : true;
   }
 
   // Load true nodes/lilith settings (with backwards compatibility for old saved settings)
@@ -1199,19 +1244,25 @@ function loadSettingsIntoForm(settings) {
     'select[name="fixedStarsMagnitude"]',
   );
   if (fixedStarsMagnitudeSelect) {
+    const magnitude = settings.wheelSettings.fixedStarsMagnitude !== undefined
+      ? Number(settings.wheelSettings.fixedStarsMagnitude).toFixed(1)
+      : "2.0";
     fixedStarsMagnitudeSelect.value =
-      settings.wheelSettings.fixedStarsMagnitude !== undefined
-        ? Number(settings.wheelSettings.fixedStarsMagnitude).toFixed(1)
-        : "2.0"; // default for old settings
+      Array.from(fixedStarsMagnitudeSelect.options).some((option) => option.value === magnitude)
+        ? magnitude
+        : "2.0";
   }
   const fixedStarsLatitudeSelect = document.querySelector(
     'select[name="fixedStarsLatitude"]',
   );
   if (fixedStarsLatitudeSelect) {
+    const latitude = settings.wheelSettings.fixedStarsLatitude !== undefined
+      ? String(settings.wheelSettings.fixedStarsLatitude)
+      : "30";
     fixedStarsLatitudeSelect.value =
-      settings.wheelSettings.fixedStarsLatitude !== undefined
-        ? String(settings.wheelSettings.fixedStarsLatitude)
-        : "30"; // default for old settings
+      Array.from(fixedStarsLatitudeSelect.options).some((option) => option.value === latitude)
+        ? latitude
+        : "30";
   }
 
   // Load custom points (with backwards compatibility - old settings won't have this)
@@ -1321,18 +1372,27 @@ function loadSettingsIntoForm(settings) {
   }
   const houseSelect = document.querySelector(`select[name="houseSystem"]`);
   if (houseSelect) {
-    houseSelect.value = savedSystemSettings.houseSystem;
+    const houseValue = savedSystemSettings.houseSystem || "Placidus";
+    houseSelect.value = Array.from(houseSelect.options).some((option) => option.value === houseValue)
+      ? houseValue
+      : "Placidus";
   }
   const coordSelect = document.querySelector(`select[name="coordinateSystem"]`);
   if (coordSelect) {
-    coordSelect.value = savedSystemSettings.coordinateSystem;
+    const coordinateValue = savedSystemSettings.coordinateSystem || "Geocentric";
+    coordSelect.value = Array.from(coordSelect.options).some((option) => option.value === coordinateValue)
+      ? coordinateValue
+      : "Geocentric";
   }
   const ascendantOverrideSelect = document.querySelector(
     'select[name="ascendantOverride"]',
   );
   if (ascendantOverrideSelect) {
+    const ascendantValue = savedSystemSettings.ascendantOverride || "Normal";
     ascendantOverrideSelect.value =
-      savedSystemSettings.ascendantOverride || "Normal";
+      Array.from(ascendantOverrideSelect.options).some((option) => option.value === ascendantValue)
+        ? ascendantValue
+        : "Normal";
   }
   // Never restore location from a saved preset, including legacy presets that
   // still contain locationSettings. Keep the active/account Default Location

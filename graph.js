@@ -456,6 +456,21 @@ document.getElementById("graphForm").addEventListener("submit", async function (
   const selectedCoordinateSystem = document.querySelector(
     '#system-settings select[name="coordinateSystem"]'
   ).value;
+  const selectedDraconic = document.querySelector(
+    '.degree-settings input[name="draconic"]'
+  )?.checked === true;
+  const selectedAscendantOverride = document.getElementById(
+    "ascendantOverride"
+  )?.value || "Normal";
+  const selectedFixedStars = document.querySelector(
+    'input[name="fixedStars"]'
+  )?.checked === true;
+  const selectedFixedStarsMagnitude = parseFloat(
+    document.querySelector('select[name="fixedStarsMagnitude"]')?.value
+  );
+  const selectedFixedStarsLatitude = parseFloat(
+    document.querySelector('select[name="fixedStarsLatitude"]')?.value
+  );
 
   combinedData.selectedPlanetsNatal = selectedPlanetsNatal;
   combinedData.selectedPlanetsProgressed = selectedPlanetsProgressed;
@@ -471,6 +486,11 @@ document.getElementById("graphForm").addEventListener("submit", async function (
   combinedData.selectedAyanamsaSystem = selectedAyanamsaSystem;
   combinedData.selectedHouseSystem = selectedHouseSystem;
   combinedData.selectedCoordinateSystem = selectedCoordinateSystem;
+  combinedData.draconic = selectedDraconic;
+  combinedData.ascendantOverride = selectedAscendantOverride;
+  combinedData.fixedStars = selectedFixedStars;
+  combinedData.fixedStarsMagnitude = selectedFixedStarsMagnitude;
+  combinedData.fixedStarsLatitude = selectedFixedStarsLatitude;
 
   const graphApiUrl =
     typeof window.trueskyApiUrl === "function"

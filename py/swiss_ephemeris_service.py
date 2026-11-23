@@ -475,6 +475,101 @@ def calculate_payload(req):
     out['positions']['Vertex'] = {"position": vertex_pos, "eclipticLatitude": 0.0}
     out['positions']['Anti-Vertex'] = {"position": norm(vertex_pos + 180), "eclipticLatitude": 0.0}
 
+    # Chart-level angle overrides and draconic rotations are calculation
+    # settings, not rendering-only switches. Apply them to every calculated
+    # position so wheel, aspects, houses and reports stay in the same zodiac.
+    ascendant_override = str(req.get('ascendantOverride') or 'Normal').strip()
+    override_names = {
+        'Sun': 'Sun', 'Moon': 'Moon', 'Mercury': 'Mercury',
+        'Venus': 'Venus', 'Mars': 'Mars', 'Jupiter': 'Jupiter',
+        'Saturn': 'Saturn', 'Earth': 'Earth', 'Aries': None,
+    }
+    if ascendant_override.lower() != 'normal':
+        if ascendant_override == 'Aries':
+            override_pos = 0.0
+        else:
+            override_pos = out['positions'].get(override_names.get(ascendant_override), {}).get('position')
+        if isinstance(override_pos, (int, float)):
+            asc_pos = norm(float(override_pos))
+            original_asc = norm(float(out['positions']['Ascendant Symbol']['position']))
+            asc_offset = norm(asc_pos - original_asc)
+            if house_code in (b'W', b'E'):
+                first_cusp = norm((int(asc_pos // 30) * 30) if house_code == b'W' else asc_pos)
+                out['houseCusps'] = [
+                    {"house": i + 1, "position": norm(first_cusp + i * 30)}
+                    for i in range(12)
+                ]
+            else:
+                out['houseCusps'] = [
+                    {"house": cusp['house'], "position": norm(float(cusp['position']) + asc_offset)}
+                    for cusp in out['houseCusps']
+                ]
+            house_anchor = {item['house']: item['position'] for item in out['houseCusps']}
+            out['positions']['Ascendant Symbol'] = anchored_angle(asc_pos, 1)
+            out['positions']['Descendant'] = anchored_angle(norm(asc_pos + 180), 7)
+
+    draconic_offset = 0.0
+    if req.get('draconic') is True and coordinate_system != 'heliocentric':
+        node_pos = out['positions'].get('North Node', {}).get('position')
+        if isinstance(node_pos, (int, float)):
+            draconic_offset = norm(float(node_pos))
+            for name, value in list(out['positions'].items()):
+                if not isinstance(value, dict) or not isinstance(value.get('position'), (int, float)):
+                    continue
+                out['positions'][name] = {
+                    **value,
+                    'position': norm(float(value['position']) - draconic_offset),
+                }
+            out['houseCusps'] = [
+                {
+                    **cusp,
+                    'position': norm(float(cusp['position']) - draconic_offset),
+                }
+                for cusp in out['houseCusps']
+            ]
+
+    custom_points = req.get('customPoints')
+    if isinstance(custom_points, list):
+        for index, point in enumerate(custom_points[:5], start=1):
+            if not isinstance(point, dict):
+                continue
+            asteroid_num = point.get('num')
+            asteroid_name = str(point.get('name') or '').strip()
+            try:
+                asteroid_num = int(asteroid_num)
+            except Exception:
+                continue
+            if asteroid_num < 1 or asteroid_num > 999999:
+                continue
+            try:
+                direct_asteroids = {
+                    'Ceres': swe.CERES,
+                    'Pallas': swe.PALLAS,
+                    'Juno': swe.JUNO,
+                    'Vesta': swe.VESTA,
+                }
+                asteroid_body = direct_asteroids.get(asteroid_name)
+                if asteroid_body is None:
+                    asteroid_body = swe.AST_OFFSET + asteroid_num
+                result = swe.calc_ut(jd, asteroid_body, calculation_flags)
+                xx = result[0] if isinstance(result, tuple) and result and isinstance(result[0], (tuple, list)) else result
+                position = norm(float(xx[0]) - ayan)
+                if req.get('draconic') is True and coordinate_system != 'heliocentric':
+                    position = norm(position - draconic_offset)
+                slot = f"{index:02d}"
+                out['positions'][f'Custom_{slot}_{asteroid_name}'] = {
+                    'position': position,
+                    'eclipticLatitude': float(xx[1]) if len(xx) > 1 else 0.0,
+                    'speed': float(xx[3]) if len(xx) > 3 else 0.0,
+                    'retrograde': len(xx) > 3 and float(xx[3]) < 0,
+                    'isCustomPoint': True,
+                    'asteroidNum': asteroid_num,
+                    'asteroidName': asteroid_name,
+                    'displayLabel': slot,
+                }
+            except Exception as exc:
+                continue
+
     # Arabic parts must be recomputed from the final Swiss Sun/Moon/ASC.
     sun = out['positions'].get('Sun', {}).get('position')
     moon = out['positions'].get('Moon', {}).get('position')
@@ -888,6 +983,27 @@ def graph_positions_at_jd(jd, names, req):
             except Exception:
                 raise ValueError(f'Unable to calculate {requested_name}: {exc}') from exc
         result[str(requested_name)] = (position, speed)
+
+    override = str(req.get('ascendantOverride') or 'Normal').strip()
+    if override.lower() != 'normal':
+        if override == 'Aries':
+            override_position = 0.0
+        else:
+            override_position = result.get(override, (None, 0))[0]
+        if isinstance(override_position, (int, float)):
+            if 'Ascendant_Symbol' in result:
+                result['Ascendant_Symbol'] = (norm(float(override_position)), 0.0)
+            if 'Ascendant Symbol' in result:
+                result['Ascendant Symbol'] = (norm(float(override_position)), 0.0)
+
+    if req.get('draconic') is True and coordinate_system != 'heliocentric':
+        node_position = result.get('North Node', (None, 0))[0]
+        if isinstance(node_position, (int, float)):
+            draconic_offset = norm(float(node_position))
+            result = {
+                name: (norm(position - draconic_offset), speed)
+                for name, (position, speed) in result.items()
+            }
     return result
 
 def graph_date_jd(req, prefix, utc_offset):
@@ -1215,6 +1331,8 @@ def calculate_transit_graph(req):
         'selectedAyanamsaSystem': req.get('selectedAyanamsaSystem') or natal.get('ayanamsaSystem') or 'Tropical',
         'selectedHouseSystem': req.get('selectedHouseSystem') or natal.get('houseSystem') or 'Placidus',
         'selectedCoordinateSystem': req.get('selectedCoordinateSystem') or natal.get('coordinateSystem') or 'Geocentric',
+        'draconic': req.get('draconic', natal.get('draconic', False)),
+        'ascendantOverride': req.get('ascendantOverride', natal.get('ascendantOverride', 'Normal')),
     }
     natal_jd = julday_from_request(natal_req)
     natal_positions = graph_positions_at_jd(
