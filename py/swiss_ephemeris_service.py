@@ -99,8 +99,17 @@ PISTAK_0_ARIES_60_KEY = PISTAK_0_ARIES_60_NAME.lower()
 # DE441 reference event; SIDM_USER expects its reference epoch in TT.
 PISTAK_0_ARIES_60_JD_TT = 1743053.8180430592
 
+PISTAK_23_03_68_BC_NAME = 'Pistak 23/03/68A.C'
+PISTAK_23_03_68_BC_KEY = PISTAK_23_03_68_BC_NAME.lower()
+PISTAK_23_03_68_BC_JD_TT = 1696668.0674648974
+
 def pistak_0_aries_60_ayanamsa(jd_ut):
     swe.set_sid_mode(swe.SIDM_USER, PISTAK_0_ARIES_60_JD_TT, 0.0)
+    return signed_angle(swe.get_ayanamsa_ut(jd_ut))
+
+def pistak_23_03_68_bc_ayanamsa(jd_ut):
+    # Swiss Ephemeris applies its precession model from the zero-offset TT epoch.
+    swe.set_sid_mode(swe.SIDM_USER, PISTAK_23_03_68_BC_JD_TT, 0.0)
     return signed_angle(swe.get_ayanamsa_ut(jd_ut))
 
 AYANAMSA_MODES = {
@@ -163,6 +172,7 @@ def current_ayanamsa_values(now_jd=None):
         values[display_name] = signed_angle(swe.get_ayanamsa_ut(now_jd))
 
     values[PISTAK_0_ARIES_60_NAME] = pistak_0_aries_60_ayanamsa(now_jd)
+    values[PISTAK_23_03_68_BC_NAME] = pistak_23_03_68_bc_ayanamsa(now_jd)
     return values
 
 def kepler_solve(M_rad, e):
@@ -303,6 +313,8 @@ def resolve_ayanamsa(req, jd):
             return 0.0
         if ayanamsa_name == PISTAK_0_ARIES_60_KEY:
             return pistak_0_aries_60_ayanamsa(jd)
+        if ayanamsa_name == PISTAK_23_03_68_BC_KEY:
+            return pistak_23_03_68_bc_ayanamsa(jd)
         mode = AYANAMSA_MODES.get(ayanamsa_name)
         if mode is None:
             raise ValueError(f'Unsupported ayanamsa system: {selected_ayanamsa}')
@@ -317,6 +329,8 @@ def resolve_ayanamsa(req, jd):
         return 0.0
     if zodiac == PISTAK_0_ARIES_60_KEY:
         return pistak_0_aries_60_ayanamsa(jd)
+    if zodiac == PISTAK_23_03_68_BC_KEY:
+        return pistak_23_03_68_bc_ayanamsa(jd)
     if zodiac in (
         'tropical',
         'midpoint',
