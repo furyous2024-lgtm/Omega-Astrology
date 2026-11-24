@@ -986,6 +986,15 @@ body::before {
   grid-template-columns: repeat(2, auto);
 }
 
+.system-settings {
+  grid-template-columns: minmax(120px, 180px) minmax(0, 360px);
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  margin-right: auto;
+  margin-left: auto;
+}
+
 .aspect-orb {
   font-size: 16px;
   border-radius: 2px;
@@ -1062,19 +1071,21 @@ body::before {
   text-align: left;
 }
 
-.system-settings > select {
-  justify-self: end;
+.system-settings > select,
+.system-settings > input[id^="customAyanamsa"] {
+  box-sizing: border-box;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
 }
 
 .system-settings input[name="customAyanamsaValue"] {
-  width: 110px;
   font-family: "Segoe UI", sans-serif;
   font-size: 16px;
   text-align: right;
 }
 
 .system-settings input[id^="customAyanamsa"]:not([id="customAyanamsaDegrees"]):not([id="customAyanamsaMinutes"]):not([id="customAyanamsaSeconds"]) {
-  justify-self: end;
   font-family: "Segoe UI", sans-serif;
   font-size: 16px;
   text-align: right;
@@ -1082,7 +1093,7 @@ body::before {
 
 #customAyanamsaDegreesValue,
 #customAyanamsaJulianDate {
-  width: 110px;
+  text-align: right;
 }
 
 .custom-ayanamsa-dms:not([hidden]) {

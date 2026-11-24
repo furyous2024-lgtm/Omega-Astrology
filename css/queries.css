@@ -403,11 +403,6 @@
     height: 16px;
   }
 
-  /* System settings dropdowns narrower */
-  .system-settings select {
-    max-width: 160px;
-  }
-
   .ascendant-override select {
     width: 80px;
   }
