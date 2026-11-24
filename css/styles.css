@@ -1057,6 +1057,15 @@ body::before {
   font-size: 16px;
 }
 
+.system-settings > label.type-icon {
+  justify-self: start;
+  text-align: left;
+}
+
+.system-settings > select {
+  justify-self: end;
+}
+
 .system-settings input[name="customAyanamsaValue"] {
   width: 110px;
   font-family: "Segoe UI", sans-serif;
@@ -1064,24 +1073,42 @@ body::before {
   text-align: right;
 }
 
+.system-settings input[id^="customAyanamsa"]:not([id="customAyanamsaDegrees"]):not([id="customAyanamsaMinutes"]):not([id="customAyanamsaSeconds"]) {
+  justify-self: end;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 16px;
+  text-align: right;
+}
+
+#customAyanamsaDegreesValue,
+#customAyanamsaJulianDate {
+  width: 110px;
+}
+
 .custom-ayanamsa-dms:not([hidden]) {
   display: grid;
   grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) 160px;
   gap: 8px;
-  justify-self: center;
+  align-items: start;
+  justify-self: stretch;
   box-sizing: border-box;
   width: 100%;
-  max-width: 320px;
+  max-width: none;
 }
 
 .custom-ayanamsa-dms-title {
-  text-align: center;
+  justify-self: start;
+  text-align: left;
+  font-size: 18px;
 }
 
 .custom-ayanamsa-dms-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  justify-self: end;
+  width: 160px;
 }
 
 .custom-ayanamsa-dms-fields > div {
