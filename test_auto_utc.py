@@ -45,6 +45,16 @@ class AutomaticUtcTests(unittest.TestCase):
         self.assertGreaterEqual(result["utcOffset"], -14)
         self.assertLessEqual(result["utcOffset"], 14)
 
+    def test_uses_local_mean_solar_time_for_years_outside_datetime_range(self):
+        bc = self.resolve(-7, 8, 21, 12, 0, 40.7128, -74.006)
+        astronomical_year_zero = self.resolve(0, 8, 21, 12, 0, 27.7172, 85.324)
+        year_10000 = self.resolve(10000, 8, 21, 12, 0, 40.7128, -74.006)
+
+        self.assertAlmostEqual(bc["utcOffset"], -74.006 / 15)
+        self.assertEqual(bc["timezone"], "America/New_York")
+        self.assertAlmostEqual(astronomical_year_zero["utcOffset"], 85.324 / 15)
+        self.assertAlmostEqual(year_10000["utcOffset"], -74.006 / 15)
+
     def test_chart_response_contains_the_resolved_utc_metadata(self):
         request = self.resolve(2021, 7, 15, 12, 0, 40.7128, -74.0060)
         result = SERVICE.calculate_payload(request)
@@ -53,6 +63,14 @@ class AutomaticUtcTests(unittest.TestCase):
         self.assertEqual(result["utcMode"], "auto")
         self.assertEqual(result["utcOffset"], -4)
         self.assertEqual(result["timezone"], "America/New_York")
+
+    def test_bce_chart_calculation_uses_automatic_utc(self):
+        request = self.resolve(-7, 8, 21, 12, 0, 40.7128, -74.006)
+        result = SERVICE.calculate_payload(request)
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["utcMode"], "auto")
+        self.assertAlmostEqual(result["utcOffset"], -74.006 / 15)
 
 
 if __name__ == "__main__":

@@ -1128,7 +1128,7 @@ export function setupLocalLocationFields() {
       label.className = "auto-utc-option";
       const prefix = form.id || "chart";
       label.htmlFor = `${prefix}-auto-utc`;
-      label.innerHTML = `<input id="${prefix}-auto-utc" name="autoUtc" type="checkbox" value="true" /><span><strong>Use automatic UTC</strong><small>Resolve the historical time zone and daylight-saving rules from these coordinates.</small></span>`;
+      label.innerHTML = `<input id="${prefix}-auto-utc" name="autoUtc" type="checkbox" value="true" /><span><strong>Use automatic UTC</strong><small>Uses historical time-zone rules when available; for dates outside their range, estimates UTC from longitude.</small></span>`;
       const offsetInput = fields.querySelector('[name="utcOffset"]');
       const offsetField = offsetInput?.closest(".local-coordinate-field");
       if (offsetField) offsetField.insertAdjacentElement("afterend", label);
@@ -1157,7 +1157,7 @@ export function setupLocalLocationFields() {
     const output = fields.querySelector(".utc-offset-preview");
     if (!output) return;
     if (fields.querySelector('[name="autoUtc"]')?.checked) {
-      output.textContent = "Automatic UTC will use the coordinate's historical time zone and daylight-saving rules.";
+      output.textContent = "Automatic UTC uses historical time-zone rules when available; for dates outside their range, it estimates UTC from longitude.";
       return;
     }
     const offset = Number(fields.querySelector('[name="utcOffset"]')?.value);

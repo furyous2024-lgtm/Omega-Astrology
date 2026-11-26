@@ -362,6 +362,13 @@ def historical_to_astronomical(year):
         return 0
     return y + 1 if y < 0 else y
 
+def automatic_utc_from_longitude(req, longitude, timezone_name):
+    return {
+        **req,
+        'utcOffset': longitude / 15.0,
+        'timezone': timezone_name,
+    }
+
 def julday_from_request(req):
     # Prefer raw fields. JavaScript Date cannot reliably represent BCE years,
     # and the form may send month as text (December/Dezembro) or null.
@@ -404,8 +411,6 @@ def resolve_automatic_utc(req):
         raise ValueError('No IANA time zone is mapped to these coordinates. Enter the UTC offset manually.')
 
     year = historical_to_astronomical(parse_int_field(req, ['historicalYear', 'year', 'birthYear']))
-    if year < 1:
-        raise ValueError('Automatic UTC is unavailable for dates before year 1. Enter the UTC offset manually.')
     month = parse_month_field(req)
     day = parse_int_field(req, ['day', 'birthDay'], default=1, min_value=1, max_value=31)
     hour = parse_float_field(req, ['hour', 'birthHour', 'hourString'], default=0)
@@ -415,16 +420,29 @@ def resolve_automatic_utc(req):
     if not 0 <= hour < 24 or not 0 <= minute < 60 or not 0 <= second < 60:
         raise ValueError('Automatic UTC requires a valid local time between 00:00 and 23:59:59.')
 
+    if not 1 <= year <= 9999:
+        try:
+            validation_year = (year - 1) % 400 + 1
+            datetime.datetime(validation_year, month, day)
+        except ValueError as exc:
+            raise ValueError(f'Could not resolve the local date in {timezone_name}: {exc}') from exc
+        return automatic_utc_from_longitude(req, longitude, timezone_name)
+
     try:
         local_time = datetime.datetime(year, month, day) + datetime.timedelta(seconds=total_seconds)
         zone = ZoneInfo(timezone_name)
-    except (ValueError, OverflowError, KeyError) as exc:
+    except OverflowError:
+        return automatic_utc_from_longitude(req, longitude, timezone_name)
+    except (ValueError, KeyError) as exc:
         raise ValueError(f'Could not resolve the local date in {timezone_name}: {exc}') from exc
 
     candidates = []
     for fold in (0, 1):
         candidate = local_time.replace(tzinfo=zone, fold=fold)
-        round_trip = candidate.astimezone(datetime.timezone.utc).astimezone(zone)
+        try:
+            round_trip = candidate.astimezone(datetime.timezone.utc).astimezone(zone)
+        except OverflowError:
+            return automatic_utc_from_longitude(req, longitude, timezone_name)
         if round_trip.replace(tzinfo=None) == local_time:
             candidates.append(candidate)
     if not candidates:
