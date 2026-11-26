@@ -7,7 +7,7 @@ globalThis.document = {
 };
 globalThis.window = {};
 
-const { prepareSwissRequest } = await import("./js/localSwiss.js");
+const { prepareSwissRequest, requestSwissReturnDate } = await import("./js/localSwiss.js");
 const fields = {
   location: { value: "-23.5505, -46.6333" },
   lat: { value: "-23.5505", dataset: { manual: "true" } },
@@ -16,8 +16,15 @@ const fields = {
   autoUtc: { checked: false },
   useCoordinates: { checked: false },
 };
+const preview = { textContent: "" };
+const locationFields = {
+  querySelector(selector) {
+    return selector === ".utc-offset-preview" ? preview : null;
+  },
+};
 const form = {
   querySelector(selector) {
+    if (selector === ".local-chart-location-fields") return locationFields;
     const name = selector.match(/\[name="([^"]+)"\]/)?.[1];
     return fields[name] || null;
   },
@@ -46,6 +53,32 @@ const automaticRequest = await prepareSwissRequest({
 }, form);
 assert.equal(automaticRequest.utcMode, "auto");
 assert.equal("timezone" in automaticRequest, false);
+globalThis.fetch = async () => ({
+  ok: true,
+  status: 200,
+  async text() {
+    return JSON.stringify({
+      success: true,
+      utcOffset: -4,
+      timezone: "America/New_York",
+    });
+  },
+});
+const returnDate = await requestSwissReturnDate({
+  year: 2021,
+  month: 7,
+  day: 15,
+  hour: 12,
+  minute: 0,
+  lat: 40.7128,
+  long: -74.006,
+  location: fields.location.value,
+}, form);
+assert.equal(returnDate.utcOffset, -4);
+assert.equal(
+  preview.textContent,
+  "Automatic UTC offset: UTC−04:00 (America/New_York)",
+);
 fields.autoUtc.checked = false;
 
 const savedDocuments = [];

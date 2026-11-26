@@ -42,6 +42,7 @@ const IAU_NAME_ALIASES = {
   Scorpius: "Scorpio",
   Capricornus: "Capricorn",
 };
+let iauBoundaryCache = null;
 
 let astronomyLibraryPromise;
 
@@ -174,6 +175,19 @@ function formatUtcOffset(offset) {
   const hours = String(Math.floor(absolute / 60)).padStart(2, "0");
   const minutes = String(absolute % 60).padStart(2, "0");
   return `UTC${sign}${hours}:${minutes}`;
+}
+
+function updateUtcOffsetPreview(fields, resolvedOffset, timezone) {
+  const output = fields?.querySelector(".utc-offset-preview");
+  if (!output) return;
+  const offset = Number(resolvedOffset);
+  if (resolvedOffset != null && Number.isFinite(offset)) {
+    const zoneLabel = timezone ? ` (${timezone})` : "";
+    output.textContent =
+      `Automatic UTC offset: ${formatUtcOffset(offset)}${zoneLabel}`;
+    return;
+  }
+  output.textContent = "Automatic UTC uses historical time-zone rules when available; for dates outside their range, it estimates UTC from longitude.";
 }
 
 function getGeoCache() {
@@ -530,12 +544,21 @@ function signForPosition(position, zodiacSystem, zodiacBoundaries = null) {
         ? EQUAL_13_BOUNDARIES
         : null);
   if (boundaries) {
-    let sign = boundaries[boundaries.length - 1]?.sign;
-    for (const item of boundaries) {
-      if (normalized < item.boundary) break;
-      sign = item.sign;
+    const ordered = boundaries
+      .filter((entry) => entry && Number.isFinite(Number(entry.boundary)))
+      .map((entry) => ({ sign: entry.sign, boundary: ((Number(entry.boundary) % 360) + 360) % 360 }))
+      .sort((left, right) => left.boundary - right.boundary);
+    if (ordered.length) {
+      let selected = ordered[ordered.length - 1];
+      for (const item of ordered) {
+        if (normalized < item.boundary) break;
+        selected = item;
+      }
+      if (ordered[0].boundary !== 0 && normalized < ordered[0].boundary) {
+        selected = ordered[ordered.length - 1];
+      }
+      return selected.sign;
     }
-    return sign;
   }
   return [
     "Aries",
@@ -612,6 +635,10 @@ async function getIauEclipticBoundaries(julianDay) {
   if (!Number.isFinite(julianDay)) {
     throw new Error("Swiss Ephemeris did not return a valid Julian day for IAU boundaries.");
   }
+  const cacheKey = julianDay.toFixed(6);
+  if (iauBoundaryCache?.key === cacheKey) {
+    return iauBoundaryCache.boundaries.map((entry) => ({ ...entry }));
+  }
   const astronomy = await getAstronomyLibrary();
   const time = new astronomy.AstroTime(julianDay - 2451545);
   const names = Array.from({ length: 360 }, (_, degree) =>
@@ -649,7 +676,9 @@ async function getIauEclipticBoundaries(julianDay) {
     });
   }
 
-  return boundaries.sort((left, right) => left.boundary - right.boundary);
+  const sorted = boundaries.sort((left, right) => left.boundary - right.boundary);
+  iauBoundaryCache = { key: cacheKey, boundaries: sorted.map((entry) => ({ ...entry })) };
+  return sorted;
 }
 
 function settingValues(request, key, selector, valueName) {
@@ -1049,7 +1078,15 @@ export async function requestSwissChart(request, form = null) {
   if (!response.ok || result.success === false) {
     throw new Error(result.error || `Swiss Ephemeris request failed (${response.status}).`);
   }
-  return chartDataFromSwiss(result, payload);
+  const chartData = await chartDataFromSwiss(result, payload);
+  if (payload.utcMode === "auto") {
+    updateUtcOffsetPreview(
+      form?.querySelector(".local-chart-location-fields"),
+      chartData[0]?.utcOffset,
+      chartData[0]?.timezone,
+    );
+  }
+  return chartData;
 }
 
 export async function requestSwissReturnDate(request, form = null) {
@@ -1075,6 +1112,13 @@ export async function requestSwissReturnDate(request, form = null) {
     throw new Error(
       result.error ||
         `Swiss Ephemeris return-date request failed (${response.status}).`,
+    );
+  }
+  if (payload.utcMode === "auto") {
+    updateUtcOffsetPreview(
+      form?.querySelector(".local-chart-location-fields"),
+      result.utcOffset,
+      result.timezone,
     );
   }
   return result;
@@ -1157,7 +1201,7 @@ export function setupLocalLocationFields() {
     const output = fields.querySelector(".utc-offset-preview");
     if (!output) return;
     if (fields.querySelector('[name="autoUtc"]')?.checked) {
-      output.textContent = "Automatic UTC uses historical time-zone rules when available; for dates outside their range, it estimates UTC from longitude.";
+      updateUtcOffsetPreview(fields);
       return;
     }
     const offset = Number(fields.querySelector('[name="utcOffset"]')?.value);

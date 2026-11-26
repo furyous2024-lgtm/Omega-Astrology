@@ -1106,6 +1106,18 @@ def calculate_astrocartography(req):
             }
             for index, name in enumerate(equal_signs)
         ]
+    elif zodiac_key == 'iau real constellations':
+        signs = [
+            {'name': name, 'sidLon': start}
+            for name, start in [
+                ('Aries', 0), ('Taurus', 19.7267), ('Gemini', 56.5838),
+                ('Cancer', 86.0378), ('Leo', 103.1872), ('Virgo', 141.6068),
+                ('Libra', 191.3253), ('Scorpio', 210.2037),
+                ('Ophiuchus', 223.4316), ('Sagittarius', 235.7895),
+                ('Capricorn', 269.1806), ('Aquarius', 294.8496),
+                ('Pisces', 318.0143),
+            ]
+        ]
     else:
         signs = [{'name': name, 'sidLon': start} for name, start in SIGNS.items()]
     return {
@@ -1385,6 +1397,18 @@ def graph_station_events(jds, positions, planet_names, utc_offset, planet_field)
 def graph_sign_name(position, req):
     names = list(SIGNS)
     system = str(req.get('selectedZodiacSystem') or 'Tropical').strip().lower()
+    if system == 'iau real constellations':
+        boundaries = [
+            ('Aries', 0), ('Taurus', 19.7267), ('Gemini', 56.5838),
+            ('Cancer', 86.0378), ('Leo', 103.1872), ('Virgo', 141.6068),
+            ('Libra', 191.3253), ('Scorpio', 210.2037),
+            ('Ophiuchus', 223.4316), ('Sagittarius', 235.7895),
+            ('Capricorn', 269.1806), ('Aquarius', 294.8496), ('Pisces', 318.0143),
+        ]
+        return next(
+            (name for name, boundary in reversed(boundaries) if position >= boundary),
+            boundaries[-1][0],
+        )
     if system == 'midpoint':
         boundaries = [
             ('Aries', 0), ('Taurus', 19.7267), ('Gemini', 56.5838),

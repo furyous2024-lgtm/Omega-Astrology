@@ -1217,6 +1217,11 @@ const extractFixedStarsForAI = (data, zodiacSystem) => {
           ?.start ?? 0;
       degreeInSign = pos - signStart;
       if (degreeInSign < 0) degreeInSign += 360;
+    } else if (isIauRealConstellationSystem(zodiacSystem)) {
+      const boundaries = iauRealBoundaries();
+      const signData = boundaries.find((boundary) => boundary.sign === star.sign);
+      degreeInSign = signData ? pos - signData.start : pos % 30;
+      if (degreeInSign < 0) degreeInSign += 360;
     } else {
       // Tropical - standard 30° signs
       degreeInSign = pos % 30;
@@ -1282,9 +1287,27 @@ const EQUAL_13_BOUNDARIES = EQUAL_13_SIGN_ORDER.map((sign, index) => ({
   start: (240 + (index - 8) * (360 / EQUAL_13_SIGN_ORDER.length) + 360) % 360,
 }));
 
+function isIauRealConstellationSystem(zodiacSystem) {
+  return String(zodiacSystem || "").toLowerCase().includes("iau");
+}
+
+function iauRealBoundaries() {
+  const boundaries = window.natalData?.[0]?.zodiacBoundaries;
+  if (Array.isArray(boundaries) && boundaries.length) {
+    return boundaries
+      .filter((item) => item && Number.isFinite(Number(item.boundary)))
+      .map((item) => ({ sign: item.sign, start: Number(item.boundary) }))
+      .sort((left, right) => left.start - right.start);
+  }
+  return MIDPOINT_BOUNDARIES;
+}
+
 function zodiacSignOrder(zodiacSystem) {
   if (zodiacSystem === "Midpoint") return MIDPOINT_SIGNS;
   if (zodiacSystem === "13 Equal") return EQUAL_13_SIGN_ORDER;
+  if (isIauRealConstellationSystem(zodiacSystem)) {
+    return iauRealBoundaries().map((item) => item.sign);
+  }
   return TROPICAL_SIGNS;
 }
 
@@ -1366,6 +1389,16 @@ function getPreviousSign(sign, zodiacSystem) {
 function getSignWidth(sign, zodiacSystem) {
   if (zodiacSystem === "Midpoint") {
     return MIDPOINT_SIGN_WIDTHS[sign] || 30;
+  }
+  if (isIauRealConstellationSystem(zodiacSystem)) {
+    const boundaries = iauRealBoundaries();
+    const index = boundaries.findIndex((item) => item.sign === sign);
+    if (index >= 0) {
+      const next = boundaries[(index + 1) % boundaries.length];
+      let span = next.start - boundaries[index].start;
+      if (span <= 0) span += 360;
+      return span;
+    }
   }
   return 30; // Tropical - all signs are 30°
 }
@@ -1587,6 +1620,15 @@ function positionToSignDegree(position, zodiacSystem) {
     }
     sign = EQUAL_13_BOUNDARIES[signIndex].sign;
     degreeInSign = pos - EQUAL_13_BOUNDARIES[signIndex].start;
+    if (degreeInSign < 0) degreeInSign += 360;
+  } else if (isIauRealConstellationSystem(zodiacSystem)) {
+    const boundaries = iauRealBoundaries();
+    let signIndex = boundaries.length - 1;
+    for (let i = 0; i < boundaries.length; i++) {
+      if (pos >= boundaries[i].start) signIndex = i;
+    }
+    sign = boundaries[signIndex].sign;
+    degreeInSign = pos - boundaries[signIndex].start;
     if (degreeInSign < 0) degreeInSign += 360;
   } else {
     // Tropical - standard 30° signs
