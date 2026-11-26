@@ -1400,9 +1400,22 @@ Promise.all([
 function calculatePlanetDegrees(position, zodiacSystem) {
   const longitude = ((position % 360) + 360) % 360;
   const boundaries = zodiacBoundariesFor(zodiacSystem);
-  const start = boundaries
-    ? [...boundaries].reverse().find((item) => longitude >= item.boundary) ||
-      boundaries[boundaries.length - 1]
+  const start = Array.isArray(boundaries) && boundaries.length
+    ? (() => {
+        const ordered = boundaries
+          .filter((item) => item && Number.isFinite(Number(item.boundary)))
+          .map((item) => ({
+            ...item,
+            boundary: ((Number(item.boundary) % 360) + 360) % 360,
+          }))
+          .sort((left, right) => left.boundary - right.boundary);
+        let current = ordered[ordered.length - 1];
+        for (const item of ordered) {
+          if (longitude < item.boundary) break;
+          current = item;
+        }
+        return current;
+      })()
     : { boundary: Math.floor(longitude / 30) * 30 };
   let degreeInSign = longitude - start.boundary;
   if (degreeInSign < 0) degreeInSign += 360;
@@ -2947,45 +2960,27 @@ export function sharedNatal(
           boundaries,
           selectedZodiacSystem,
         ) {
-          // Mainstream 30 degree systems
-          if (selectedZodiacSystem !== "Midpoint") {
-            const degreeInSign = totalDegrees % 30;
-            const d = Math.floor(degreeInSign);
-            const m = Math.floor((degreeInSign - d) * 60);
-            const mStr = m < 10 ? "0" + m : m;
-            return { hour: d, minute: mStr };
-          }
+          const longitude = ((Number(totalDegrees) % 360) + 360) % 360;
+          let degreeInSign = longitude % 30;
 
-          // Custom boundaries
-          let signStart = 0,
-            signEnd = 0;
-
-          // If planet's position is less than the first boundary it belongs to the last sign
-          if (totalDegrees < boundaries[0].boundary) {
-            signStart = boundaries[boundaries.length - 1].boundary;
-            signEnd = 360;
-          } else {
-            // Otherwise find the sign where totalDegrees falls
-            for (let i = 0; i < boundaries.length; i++) {
-              const current = boundaries[i];
-              const next = boundaries[i + 1];
-              if (!next) {
-                // last sign
-                signStart = current.boundary;
-                signEnd = 360;
-                break;
+          if (Array.isArray(boundaries) && boundaries.length) {
+            const ordered = boundaries
+              .filter((item) => item && Number.isFinite(Number(item.boundary)))
+              .map((item) => ({
+                ...item,
+                boundary: ((Number(item.boundary) % 360) + 360) % 360,
+              }))
+              .sort((left, right) => left.boundary - right.boundary);
+            if (ordered.length) {
+              let signStart = ordered[ordered.length - 1].boundary;
+              for (const item of ordered) {
+                if (longitude < item.boundary) break;
+                signStart = item.boundary;
               }
-              if (
-                totalDegrees >= current.boundary &&
-                totalDegrees < next.boundary
-              ) {
-                signStart = current.boundary;
-                signEnd = next.boundary;
-                break;
-              }
+              degreeInSign = ((longitude - signStart) % 360 + 360) % 360;
             }
           }
-          const degreeInSign = totalDegrees - signStart;
+
           const d = Math.floor(degreeInSign);
           const m = Math.floor((degreeInSign - d) * 60);
           const mStr = m < 10 ? "0" + m : m;

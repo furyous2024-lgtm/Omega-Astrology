@@ -1192,7 +1192,7 @@ const extractFixedStarsForAI = (data, zodiacSystem) => {
     let degreeInSign;
 
     if (zodiacSystem === "Midpoint") {
-      // Find sign boundary for True Sidereal
+      // Find the actual boundary containing the position.
       const boundaries = [
         { sign: "Aries", start: 0 },
         { sign: "Taurus", start: 19.7267 },
@@ -1208,20 +1208,27 @@ const extractFixedStarsForAI = (data, zodiacSystem) => {
         { sign: "Aquarius", start: 294.8496 },
         { sign: "Pisces", start: 318.0143 },
       ];
-      const signData = boundaries.find((b) => b.sign === star.sign);
-      degreeInSign = signData ? pos - signData.start : pos % 30;
-      if (degreeInSign < 0) degreeInSign += 360;
+      let signStart = boundaries[boundaries.length - 1].start;
+      for (const boundary of boundaries) {
+        if (pos < boundary.start) break;
+        signStart = boundary.start;
+      }
+      degreeInSign = ((pos - signStart) % 360 + 360) % 360;
     } else if (zodiacSystem === "13 Equal") {
-      const signStart =
-        EQUAL_13_BOUNDARIES.find((boundary) => boundary.sign === star.sign)
-          ?.start ?? 0;
-      degreeInSign = pos - signStart;
-      if (degreeInSign < 0) degreeInSign += 360;
+      let signStart = EQUAL_13_BOUNDARIES[EQUAL_13_BOUNDARIES.length - 1].start;
+      for (const boundary of EQUAL_13_BOUNDARIES) {
+        if (pos < boundary.start) break;
+        signStart = boundary.start;
+      }
+      degreeInSign = ((pos - signStart) % 360 + 360) % 360;
     } else if (isIauRealConstellationSystem(zodiacSystem)) {
       const boundaries = iauRealBoundaries();
-      const signData = boundaries.find((boundary) => boundary.sign === star.sign);
-      degreeInSign = signData ? pos - signData.start : pos % 30;
-      if (degreeInSign < 0) degreeInSign += 360;
+      let signStart = boundaries[boundaries.length - 1].start;
+      for (const boundary of boundaries) {
+        if (pos < boundary.start) break;
+        signStart = boundary.start;
+      }
+      degreeInSign = ((pos - signStart) % 360 + 360) % 360;
     } else {
       // Tropical - standard 30° signs
       degreeInSign = pos % 30;
