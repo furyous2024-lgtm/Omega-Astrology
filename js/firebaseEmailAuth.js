@@ -257,9 +257,9 @@
     const raw = body || {};
     const lat = raw.lat ?? raw.latitude ?? "";
     const lon = raw.long ?? raw.lon ?? raw.lng ?? raw.longitude ?? "";
-    const utc = raw.utcOffset ?? raw.utc ?? raw.timezoneOffset ?? raw.utc_offset ?? "";
-    const timezone = raw.timezone ?? raw.timezoneName ?? "";
-    const utcMode = raw.utcMode ?? raw.timezoneMode ?? "auto";
+    const utcValue = raw.utcOffset ?? raw.utc ?? raw.timezoneOffset ?? raw.utc_offset;
+    const utc = utcValue == null || utcValue === "" ? 0 : utcValue;
+    const utcMode = "manual";
     const nowIso = now();
 
     return {
@@ -278,8 +278,6 @@
       longitude: lon,
       utc,
       utcOffset: utc,
-      timezone,
-      timezoneName: timezone,
       utcMode,
       profile_type: raw.profile_type || raw.chart_type || "natal",
       natalData: raw.natalData || null,

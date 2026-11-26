@@ -64,14 +64,6 @@
     return cleanText(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ");
   }
 
-  function utcModeForChart(chart) {
-    const storedMode = cleanText(chart.utcMode || chart.timezoneMode).toLowerCase();
-    if (storedMode === "manual" || storedMode === "auto") return storedMode;
-
-    const coordinateLocation = /^\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)\s*,\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)\s*$/.test(cleanText(chart.location));
-    return chart.timezone || chart.timezoneName || !coordinateLocation ? "auto" : "manual";
-  }
-
   function normalizeMonth(value) {
     const month = normalizeText(value);
     const aliases = {
@@ -125,9 +117,8 @@
       minute: data.minute == null ? "0" : data.minute,
       lat: data.lat == null ? null : data.lat,
       long: data.long == null ? null : data.long,
-      utc: data.utc == null ? (data.utcOffset == null ? null : data.utcOffset) : data.utc,
-      utcMode: utcModeForChart(data),
-      timezone: cleanText(data.timezone || data.timezoneName),
+      utc: data.utc == null ? (data.utcOffset == null ? 0 : data.utcOffset) : data.utc,
+      utcMode: "manual",
       location: cleanText(data.location),
       created_at: timestampIso(data.createdAt || data.created_at),
       updated_at: timestampIso(data.updatedAt || data.updated_at),
@@ -149,7 +140,7 @@
     if (!q) return charts.slice();
     return charts.filter((chart) => normalizeText([
       chart.name, chart.year, chart.month, chart.day, chart.hour, chart.minute,
-      chart.location, chart.lat, chart.long, chart.utc, chart.utcMode, chart.timezone
+      chart.location, chart.lat, chart.long, chart.utc
     ].join(" ")).includes(q));
   }
 
@@ -161,6 +152,12 @@
     if (!chartInput || typeof chartInput !== "object") {
       throw new Error("Calcule o mapa natal antes de salvar.");
     }
+    const utcValue = chartInput.utc == null ? chartInput.utcOffset : chartInput.utc;
+    const utc = Number(utcValue == null ? 0 : utcValue);
+    if (String(utcValue == null ? "0" : utcValue).trim() === "" ||
+        !Number.isFinite(utc) || utc < -14 || utc > 14) {
+      throw new Error("Manual UTC offset must be between -14 and +14 hours.");
+    }
     const chart = {
       name: cleanText(chartInput.name),
       year: chartInput.year == null ? "" : chartInput.year,
@@ -170,9 +167,8 @@
       minute: chartInput.minute == null ? "0" : chartInput.minute,
       lat: chartInput.lat == null ? null : chartInput.lat,
       long: chartInput.long == null ? null : chartInput.long,
-      utc: chartInput.utc == null ? (chartInput.utcOffset == null ? null : chartInput.utcOffset) : chartInput.utc,
-      utcMode: utcModeForChart(chartInput),
-      timezone: cleanText(chartInput.timezone || chartInput.timezoneName),
+      utc,
+      utcMode: "manual",
       location: cleanText(chartInput.location)
     };
     if (!chart.year || !chart.month || !chart.day || chart.hour === "" || chart.minute === "") {
@@ -290,21 +286,14 @@
             if (field) field.value = value == null ? "" : value;
           });
           const form = document.getElementById(`${options.formPrefix}Form`);
-          const utcMode = form?.querySelector('[name="utcMode"]');
           const utcOffset = form?.querySelector('[name="utcOffset"]');
-          const timezone = form?.querySelector('[name="timezone"]');
           const latitude = form?.querySelector('[name="lat"]');
           const longitude = form?.querySelector('[name="long"]');
-          const restoredUtcMode = utcModeForChart(chart);
-          if (utcMode) utcMode.value = restoredUtcMode;
-          if (utcOffset) utcOffset.value = chart.utc == null ? "" : chart.utc;
-          if (timezone) {
-            timezone.value = chart.timezone || "";
-            timezone.dispatchEvent(new Event("change", { bubbles: true }));
-          }
+          const utcMode = form?.querySelector('[name="utcMode"]');
+          if (utcMode) utcMode.value = "manual";
+          if (utcOffset) utcOffset.value = chart.utc == null ? "0" : chart.utc;
           if (latitude) latitude.value = chart.lat == null ? "" : chart.lat;
           if (longitude) longitude.value = chart.long == null ? "" : chart.long;
-          if (utcMode) utcMode.dispatchEvent(new Event("change", { bubbles: true }));
           const search = document.getElementById(options.searchInputId);
           if (search) search.value = "";
           renderList(options, currentCharts);
@@ -402,12 +391,7 @@
             lat: data.lat,
             long: data.long,
             utc: data.utcOffset,
-            utcMode: data.utcMode || document
-              .getElementById(`${options.formPrefix}Form`)
-              ?.querySelector('[name="utcMode"]')?.value || "auto",
-            timezone: data.timezone || document
-              .getElementById(`${options.formPrefix}Form`)
-              ?.querySelector('[name="timezone"]')?.value || "",
+            utcMode: "manual",
             location: data.location
           };
           const result = await save(chart);

@@ -47,27 +47,21 @@
       long: getHiddenValue("long") || getHiddenValue("longitude") || storedNatalData.long || storedNatalData.lon || storedNatalData.longitude || "",
       utc: getHiddenValue("utcOffset") || getHiddenValue("utc") || storedNatalData.utcOffset || storedNatalData.utc || "",
       utcOffset: getHiddenValue("utcOffset") || getHiddenValue("utc") || storedNatalData.utcOffset || storedNatalData.utc || "",
-      timezone: getHiddenValue("timezone") || getHiddenValue("timezoneName") || storedNatalData.timezone || storedNatalData.timezoneName || "",
-      timezoneName: getHiddenValue("timezone") || getHiddenValue("timezoneName") || storedNatalData.timezone || storedNatalData.timezoneName || "",
-      utcMode: getHiddenValue("utcMode") || storedNatalData.utcMode || "auto",
+      utcMode: "manual",
     };
   }
   function applySavedChartGeo(chart) {
     const lat = chart?.lat ?? chart?.latitude;
     const lon = chart?.long ?? chart?.lon ?? chart?.lng ?? chart?.longitude;
-    const utc = chart?.utcOffset ?? chart?.utc ?? chart?.timezoneOffset ?? chart?.utc_offset;
-    const timezone = chart?.timezone ?? chart?.timezoneName ?? "";
-    const utcMode = chart?.utcMode ?? chart?.timezoneMode ?? "auto";
-    const pairs = { lat, latitude: lat, long: lon, longitude: lon, utcOffset: utc, utc, timezone, timezoneName: timezone, utcMode };
+    const utc = chart?.utcOffset ?? chart?.utc ?? chart?.timezoneOffset ?? chart?.utc_offset ?? 0;
+    const utcMode = "manual";
+    const pairs = { lat, latitude: lat, long: lon, longitude: lon, utcOffset: utc, utc, utcMode };
     Object.entries(pairs).forEach(([name, value]) => {
       const input = ensureHidden(name);
       if (input && value !== undefined && value !== null && String(value).trim() !== "") input.value = String(value);
     });
     const locInput = $("natalLocation");
     if (locInput) {
-      if (timezone) locInput.dataset.selectedTimezone = String(timezone);
-      locInput.dataset.utcMode = String(utcMode || "auto");
-    window.TrueSkyLocationControls?.setUtcMode?.(locInput.closest("form"), locInput, utcMode || "auto");
       if (utc !== undefined && utc !== null && String(utc).trim() !== "") locInput.dataset.selectedUtcFallback = String(utc);
       if (lat !== undefined && lat !== null && lon !== undefined && lon !== null) {
         locInput.dataset.selectedLat = String(lat);

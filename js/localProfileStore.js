@@ -36,7 +36,12 @@
     out.minute = String(out.minute ?? "0").padStart(2, "0");
     out.lat = out.lat ?? out.latitude ?? "";
     out.long = out.long ?? out.lng ?? out.longitude ?? "";
-    out.utc = out.utc ?? out.utcOffset ?? "";
+    out.utc = out.utc ?? out.utcOffset;
+    if (out.utc == null || out.utc === "") out.utc = 0;
+    out.utcOffset = out.utc;
+    out.utcMode = "manual";
+    delete out.timezone;
+    delete out.timezoneName;
     out.location = out.location || "";
     out.profile_type = out.profile_type || out.chart_type || "natal";
     out.created_at = out.created_at || now();

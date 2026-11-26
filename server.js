@@ -502,9 +502,9 @@ app.post('/astrocartography', (req, res) => respondWithSwissEphemeris(req, res, 
   action: 'astrocartography',
 }));
 
-// City lookup with coordinates and an IANA time zone. Open-Meteo's free
-// geocoding endpoint complements the small offline city list; the browser can
-// fall back to it directly if this API is not available on an older deployment.
+// City lookup with coordinates. Open-Meteo's free geocoding endpoint
+// complements the small offline city list; the browser can fall back to it
+// directly if this API is not available on an older deployment.
 app.get('/api/location-search', (req, res) => {
   const query = String(req.query.query || req.query.q || '').trim().slice(0, 200);
   if (!query) return res.status(400).json({ success: false, error: 'Missing location query', results: [] });
@@ -522,7 +522,12 @@ app.get('/api/location-search', (req, res) => {
           return res.status(proxyRes.statusCode || 502).json({ success: false, error: 'Location search provider error', results: [] });
         }
         res.setHeader('Cache-Control', 'public, max-age=3600');
-        res.json({ success: true, results: Array.isArray(data.results) ? data.results : [] });
+        const results = Array.isArray(data.results)
+          ? data.results.map(({ name, admin1, admin2, country, latitude, longitude, feature_code }) => ({
+              name, admin1, admin2, country, latitude, longitude, feature_code,
+            }))
+          : [];
+        res.json({ success: true, results });
       } catch (err) {
         res.status(502).json({ success: false, error: 'Invalid location search response', results: [] });
       }
@@ -530,36 +535,6 @@ app.get('/api/location-search', (req, res) => {
   }).on('error', (err) => {
     console.warn('Location search provider unavailable:', err.message);
     res.status(502).json({ success: false, error: 'Location search provider unavailable', results: [] });
-  });
-});
-
-// Return the IANA time zone attached to a pair of geographic coordinates.
-app.get('/api/timezone', (req, res) => {
-  const latitude = Number(req.query.latitude ?? req.query.lat);
-  const longitude = Number(req.query.longitude ?? req.query.lon ?? req.query.long);
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
-      !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    return res.status(400).json({ success: false, error: 'Invalid latitude/longitude' });
-  }
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&current=temperature_2m&timezone=auto`;
-  https.get(url, { headers: { 'User-Agent': 'TrueSkyAstrology/1.0', Accept: 'application/json' } }, (proxyRes) => {
-    let body = '';
-    proxyRes.on('data', (chunk) => { body += chunk; });
-    proxyRes.on('end', () => {
-      try {
-        const data = JSON.parse(body || '{}');
-        if ((proxyRes.statusCode || 500) >= 400 || !data.timezone) {
-          return res.status(502).json({ success: false, error: 'Time-zone provider returned no result' });
-        }
-        res.setHeader('Cache-Control', 'public, max-age=3600');
-        res.json({ success: true, timezone: data.timezone });
-      } catch {
-        res.status(502).json({ success: false, error: 'Invalid time-zone provider response' });
-      }
-    });
-  }).on('error', (err) => {
-    console.warn('Time-zone provider unavailable:', err.message);
-    res.status(502).json({ success: false, error: 'Time-zone provider unavailable' });
   });
 });
 

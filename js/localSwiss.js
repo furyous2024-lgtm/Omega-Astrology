@@ -166,33 +166,6 @@ function findCity(location, cities) {
   return matches[0].city;
 }
 
-function isValidTimeZone(timezone) {
-  if (!String(timezone || "").trim()) return false;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: String(timezone).trim() }).format(new Date());
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function getRequestDateFromForm(form) {
-  const now = new Date();
-  const value = (name, fallback = "") => form?.querySelector(`[name="${name}"]`)?.value ?? fallback;
-  const yearValue = value("year", "") || now.getFullYear();
-  const monthValue = value("month", "") || now.getMonth() + 1;
-  const dayValue = value("day", "") || now.getDate();
-  const hourValue = value("hour", "");
-  const minuteValue = value("minute", "");
-  return {
-    year: Number(yearValue) || now.getFullYear(),
-    month: monthValue,
-    day: Number(dayValue) || now.getDate(),
-    hour: hourValue === "" ? 12 : (Number(hourValue) || 0),
-    minute: minuteValue === "" ? 0 : (Number(minuteValue) || 0),
-  };
-}
-
 function formatUtcOffset(offset) {
   if (!Number.isFinite(Number(offset))) return "UTC offset unavailable";
   const totalMinutes = Math.round(Number(offset) * 60);
@@ -201,27 +174,6 @@ function formatUtcOffset(offset) {
   const hours = String(Math.floor(absolute / 60)).padStart(2, "0");
   const minutes = String(absolute % 60).padStart(2, "0");
   return `UTC${sign}${hours}:${minutes}`;
-}
-
-async function lookupTimezoneForCoordinates(lat, lon) {
-  const apiUrl = typeof window !== "undefined" && typeof window.trueskyApiUrl === "function"
-    ? window.trueskyApiUrl(`/api/timezone?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`)
-    : `/api/timezone?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
-  try {
-    const response = await fetchWithTimeout(apiUrl, { headers: { Accept: "application/json" } }, 5000);
-    const data = await response.json();
-    if (response.ok && data?.timezone && isValidTimeZone(data.timezone)) return data.timezone;
-  } catch {
-    // Try the public provider below when the local proxy is unavailable.
-  }
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m&timezone=auto`;
-  const response = await fetchWithTimeout(url, { headers: { Accept: "application/json" } }, 7000);
-  if (!response.ok) throw new Error(`Time-zone lookup failed (${response.status}).`);
-  const data = await response.json();
-  if (!data.timezone || !isValidTimeZone(data.timezone)) {
-    throw new Error("No time zone found for these coordinates.");
-  }
-  return data.timezone;
 }
 
 function getGeoCache() {
@@ -291,7 +243,6 @@ function scoreGeocodeCandidate(candidate, parts) {
     if (candidateCountry === targetCountry) score += 100;
     else score -= 150;
   }
-  if (candidate.timezone) score += 10;
   if (candidate.feature_code && /PPLC|PPLA|PPL$/i.test(candidate.feature_code)) score += 5;
   return score;
 }
@@ -330,7 +281,7 @@ async function fetchOnlineGeocoding(location) {
         if (Array.isArray(body?.results)) queryCandidates.push(...body.results);
       }
     } catch {
-      // Offline or blocked network; caller can still use manual coordinates/time zone.
+      // Offline or blocked network; caller can still use manual coordinates and UTC offset.
     }
   }
 
@@ -348,55 +299,11 @@ async function fetchOnlineGeocoding(location) {
     country: best.country || parts.slice(2).join(", "),
     lat: Number(best.latitude),
     lon: Number(best.longitude),
-    timezone: String(best.timezone || "").trim(),
     source: "online-geocoder",
   };
   cache[cacheKey] = record;
   saveGeoCache(cache);
   return record;
-}
-
-function populateTimezoneDatalist(cities = []) {
-  let datalist = document.getElementById("trueSkyTimezones");
-  if (!datalist) {
-    datalist = document.createElement("datalist");
-    datalist.id = "trueSkyTimezones";
-    document.body.appendChild(datalist);
-  }
-  const zones = new Set(["UTC", "Etc/UTC"]);
-  try {
-    if (typeof Intl.supportedValuesOf === "function") {
-      Intl.supportedValuesOf("timeZone").forEach((zone) => zones.add(zone));
-    }
-  } catch {}
-  [
-    "America/Sao_Paulo", "America/Argentina/Buenos_Aires", "America/New_York",
-    "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Anchorage",
-    "America/Halifax", "America/Toronto", "America/Mexico_City", "America/Bogota",
-    "America/Lima", "America/Santiago", "America/Montevideo", "America/Caracas",
-    "Europe/London", "Europe/Lisbon", "Europe/Paris", "Europe/Berlin", "Europe/Madrid",
-    "Europe/Rome", "Europe/Moscow", "Africa/Cairo", "Africa/Johannesburg",
-    "Asia/Dubai", "Asia/Kolkata", "Asia/Kathmandu", "Asia/Tehran", "Asia/Tokyo",
-    "Asia/Shanghai", "Asia/Hong_Kong", "Asia/Seoul", "Asia/Singapore", "Asia/Jerusalem",
-    "Australia/Perth", "Australia/Adelaide", "Australia/Sydney", "Pacific/Auckland",
-    "Pacific/Honolulu", "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9",
-    "Etc/GMT+8", "Etc/GMT+7", "Etc/GMT+6", "Etc/GMT+5", "Etc/GMT+4", "Etc/GMT+3",
-    "Etc/GMT+2", "Etc/GMT+1", "Etc/GMT-1", "Etc/GMT-2", "Etc/GMT-3", "Etc/GMT-4",
-    "Etc/GMT-5", "Etc/GMT-6", "Etc/GMT-7", "Etc/GMT-8", "Etc/GMT-9", "Etc/GMT-10",
-    "Etc/GMT-11", "Etc/GMT-12", "Etc/GMT-13", "Etc/GMT-14",
-  ].forEach((zone) => zones.add(zone));
-  cities.forEach((city) => { if (city.timezone) zones.add(city.timezone); });
-  const currentZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  if (currentZone) zones.add(currentZone);
-  const values = Array.from(zones).sort((a, b) => a.localeCompare(b));
-  if (values.length !== datalist.options.length || datalist.dataset.ready !== "true") {
-    datalist.replaceChildren(...values.map((zone) => {
-      const option = document.createElement("option");
-      option.value = zone;
-      return option;
-    }));
-    datalist.dataset.ready = "true";
-  }
 }
 
 function parseCustomCoordinates(location) {
@@ -424,79 +331,6 @@ function coordinateLocationLabel(lat, longitude) {
 
 function isCoordinateLocationLabel(value) {
   return !!parseCustomCoordinates(value);
-}
-
-function parseStaticOffset(value) {
-  const match = String(value || "").match(/^UTC([+-])(\d{2}):?(\d{2})?$/i);
-  if (!match) return 0;
-  const hours = Number(match[2]);
-  const minutes = Number(match[3] || 0);
-  return (match[1] === "-" ? -1 : 1) * (hours + minutes / 60);
-}
-
-function monthNumber(value) {
-  if (typeof value === "number" || /^\d+$/.test(String(value || ""))) {
-    return Number(value);
-  }
-  const monthIndex = [
-    "january",
-    "february",
-    "march",
-    "april",
-    "may",
-    "june",
-    "july",
-    "august",
-    "september",
-    "october",
-    "november",
-    "december",
-  ].indexOf(normalize(value));
-  return monthIndex + 1;
-}
-
-function offsetFromTimeZone(city, request) {
-  const year = Number(request.year || request.historicalYear);
-  const month = monthNumber(request.month);
-  const day = Number(request.day || 1);
-  const hour = Number(request.hour || 0);
-  const minute = Number(request.minute || 0);
-  const fallbackOffset = parseStaticOffset(city.utcOffset);
-
-  if (!Number.isFinite(year) || year < 1 || year > 9999) {
-    return fallbackOffset;
-  }
-
-  const localWallTime = new Date(0);
-  localWallTime.setUTCFullYear(year, month - 1, day);
-  localWallTime.setUTCHours(hour, minute, 0, 0);
-  const localWallTimestamp = localWallTime.getTime();
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: city.timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
-
-  let offset = Number.isFinite(fallbackOffset) ? fallbackOffset : 0;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const instant = localWallTimestamp - offset * 60 * 60 * 1000;
-    const parts = Object.fromEntries(
-      formatter
-        .formatToParts(new Date(instant))
-        .filter((part) => part.type !== "literal")
-        .map((part) => [part.type, Number(part.value)]),
-    );
-    const zonedTime = new Date(0);
-    zonedTime.setUTCFullYear(parts.year, parts.month - 1, parts.day);
-    zonedTime.setUTCHours(parts.hour, parts.minute, parts.second, 0);
-    offset = (zonedTime.getTime() - instant) / (60 * 60 * 1000);
-  }
-  return offset;
 }
 
 function nestedNatalMetadata(request) {
@@ -542,7 +376,6 @@ export async function prepareSwissRequest(request, form = null) {
   if (city && form) {
     const latitudeInput = form.querySelector('[name="lat"]');
     const longitudeInput = form.querySelector('[name="long"]');
-    const timezoneInput = form.querySelector('[name="timezone"]');
     if (latitudeInput) {
       latitudeInput.value = formatCoordinateValue(city.lat);
       latitudeInput.dataset.manual = "false";
@@ -552,11 +385,6 @@ export async function prepareSwissRequest(request, form = null) {
       longitudeInput.dataset.manual = "false";
     }
     if (coordinateToggle) coordinateToggle.checked = false;
-    if (timezoneInput && city.timezone && isValidTimeZone(city.timezone)) {
-      timezoneInput.value = city.timezone;
-      timezoneInput.dataset.userSelected = "false";
-      delete timezoneInput.dataset.userSelectedCoordinates;
-    }
   }
 
   const latitudeField = form?.querySelector('[name="lat"]');
@@ -567,15 +395,6 @@ export async function prepareSwissRequest(request, form = null) {
     latitudeField?.dataset.manual === "true" || longitudeField?.dataset.manual === "true"
   ));
   const sameLocationAsNatal = normalize(location) === normalize(natal.location);
-  const timezoneInput = form?.querySelector('[name="timezone"]');
-  const formTimezone = String(timezoneInput?.value || payload.timezone || "").trim();
-  let selectedTimezone = customCoordinates
-    ? (formTimezone || (sameLocationAsNatal ? natal.timezone : ""))
-    : (city?.timezone || formTimezone || (sameLocationAsNatal ? natal.timezone : ""));
-  const mode =
-    payload.utcMode ||
-    form?.querySelector('[name="utcMode"]')?.value ||
-    (selectedTimezone || city ? "auto" : "manual");
   const useCityCoordinates = city && !manualCoordinates;
   const lat = useCityCoordinates
     ? city.lat
@@ -606,50 +425,21 @@ export async function prepareSwissRequest(request, form = null) {
     throw new Error("Latitude must be -90..90 and longitude -180..180.");
   }
 
-  const coordinateKey = `${formatCoordinateValue(latitude)},${formatCoordinateValue(longitude)}`;
-  if (
-    mode !== "manual" &&
-    manualCoordinates &&
-    !(
-      timezoneInput?.dataset.userSelected === "true" &&
-      timezoneInput.dataset.userSelectedCoordinates === coordinateKey
-    )
-  ) {
-    selectedTimezone = await lookupTimezoneForCoordinates(latitude, longitude);
-  } else if (mode !== "manual" && customCoordinates && !selectedTimezone) {
-    selectedTimezone = await lookupTimezoneForCoordinates(latitude, longitude);
-  }
-  if (selectedTimezone && !isValidTimeZone(selectedTimezone)) {
-    throw new Error(`Unknown time zone: ${selectedTimezone}. Choose an IANA zone such as America/Sao_Paulo or use Manual UTC offset.`);
-  }
-  const timezoneCity = selectedTimezone
-    ? { timezone: selectedTimezone, utcOffset: city?.utcOffset ?? natal.utcOffset ?? "UTC+00:00" }
-    : city || (sameLocationAsNatal && natal.timezone
-      ? { timezone: natal.timezone, utcOffset: natal.utcOffset }
-      : null);
-
-  let utcOffset;
-  if (mode === "manual") {
-    utcOffset = Number(
-      payload.utcOffset ??
-        form?.querySelector('[name="utcOffset"]')?.value,
-    );
-    if (!Number.isFinite(utcOffset) || utcOffset < -14 || utcOffset > 14) {
-      throw new Error("Manual UTC offset must be between -14 and +14 hours.");
-    }
-  } else {
-    if (!timezoneCity) {
-      throw new Error(
-        "Automatic UTC requires a city with a known time zone. Choose a city from the suggestions or switch UTC mode to Manual.",
-      );
-    }
-    utcOffset = offsetFromTimeZone(timezoneCity, payload);
+  const offsetValue =
+    form?.querySelector('[name="utcOffset"]')?.value ??
+    payload.utcOffset ??
+    natal.utcOffset ??
+    0;
+  const utcOffset = Number(offsetValue);
+  if (String(offsetValue).trim() === "" || !Number.isFinite(utcOffset) || utcOffset < -14 || utcOffset > 14) {
+    throw new Error("Manual UTC offset must be between -14 and +14 hours.");
   }
 
   payload.lat = latitude;
   payload.long = longitude;
   payload.utcOffset = utcOffset;
-  payload.utcMode = mode;
+  payload.utcMode = "manual";
+  delete payload.timezone;
   payload.useCoordinates = !!manualCoordinates;
   payload.location = manualCoordinates
     ? coordinateLocationLabel(latitude, longitude)
@@ -661,7 +451,6 @@ export async function prepareSwissRequest(request, form = null) {
     if (latitudeField) latitudeField.value = formatCoordinateValue(latitude);
     if (longitudeField) longitudeField.value = formatCoordinateValue(longitude);
   }
-  payload.timezone = selectedTimezone || city?.timezone || (sameLocationAsNatal ? natal.timezone : undefined) || payload.timezone;
   payload.selectedHouseSystem =
     payload.selectedHouseSystem || natal.houseSystem || "Placidus";
   payload.houseSystemCode =
@@ -1135,8 +924,7 @@ async function chartDataFromSwiss(result, request) {
     hourString: String(request.hour ?? natal.hour ?? "00").padStart(2, "0"),
     minuteString: String(request.minute ?? natal.minute ?? "00").padStart(2, "0"),
     utcOffset: request.utcOffset ?? natal.utcOffset,
-    utcMode: request.utcMode || "auto",
-    timezone: request.timezone || natal.timezone,
+    utcMode: "manual",
     location: request.location || natal.location || "",
     lat: request.lat,
     long: request.long,
@@ -1296,10 +1084,6 @@ export function setupLocalLocationFields() {
     status.dataset.state = state;
   }
 
-  function getTimeZoneField(fields) {
-    return fields.querySelector('[name="timezone"]');
-  }
-
   function ensureUtcOffsetOptions(fields) {
     const input = fields.querySelector('input[name="utcOffset"]');
     if (!input) return;
@@ -1307,7 +1091,6 @@ export function setupLocalLocationFields() {
     select.id = input.id;
     select.name = input.name;
     select.className = input.className;
-    select.disabled = input.disabled;
     select.setAttribute("aria-label", input.getAttribute("aria-label") || "Manual UTC offset");
     const currentValue = Number(input.value);
     for (let quarterHours = -56; quarterHours <= 56; quarterHours += 1) {
@@ -1323,44 +1106,33 @@ export function setupLocalLocationFields() {
     input.replaceWith(select);
   }
 
-  function updateOffsetPreview(form, fields) {
-    const mode = fields.querySelector('[name="utcMode"]')?.value || "auto";
-    const timezone = getTimeZoneField(fields)?.value.trim();
+  function ensureManualUtcMode(fields) {
+    let mode = fields.querySelector('[name="utcMode"]');
+    if (!mode || mode.tagName === "SELECT") {
+      const hidden = document.createElement("input");
+      hidden.type = "hidden";
+      hidden.name = "utcMode";
+      mode?.replaceWith(hidden);
+      mode = hidden;
+    }
+    mode.value = "manual";
+  }
+
+  function updateOffsetPreview(fields) {
     const output = fields.querySelector(".utc-offset-preview");
     if (!output) return;
-    if (mode === "manual") {
-      const offset = Number(fields.querySelector('[name="utcOffset"]')?.value);
-      output.textContent = Number.isFinite(offset) ? `Manual offset: ${formatUtcOffset(offset)}` : "Enter a valid UTC offset";
-      return;
-    }
-    if (!timezone || !isValidTimeZone(timezone)) {
-      output.textContent = "Select a city or time zone to calculate UTC automatically.";
-      return;
-    }
-    const request = getRequestDateFromForm(form);
-    try {
-      const offset = offsetFromTimeZone({ timezone, utcOffset: 0 }, request);
-      output.textContent = `${timezone} · ${formatUtcOffset(offset)} on the selected date`;
-    } catch {
-      output.textContent = "Could not calculate the offset for this time zone.";
-    }
+    const offset = Number(fields.querySelector('[name="utcOffset"]')?.value);
+    output.textContent = Number.isFinite(offset) ? `Selected offset: ${formatUtcOffset(offset)}` : "Select a valid UTC offset";
   }
 
   function setCoordinates(fields, record) {
     const latitudeInput = fields.querySelector('[name="lat"]');
     const longitudeInput = fields.querySelector('[name="long"]');
-    const timezoneInput = fields.querySelector('[name="timezone"]');
     if (!latitudeInput || !longitudeInput) return;
     latitudeInput.value = Number(record.lat).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
     longitudeInput.value = Number(record.lon ?? record.long).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
     latitudeInput.dataset.manual = "false";
     longitudeInput.dataset.manual = "false";
-    if (timezoneInput) {
-      timezoneInput.value = record.timezone && isValidTimeZone(record.timezone) ? record.timezone : "";
-      timezoneInput.dataset.userSelected = "false";
-      delete timezoneInput.dataset.userSelectedCoordinates;
-      timezoneInput.dispatchEvent(new Event("change", { bubbles: true }));
-    }
   }
 
   async function resolveLocation(form, locationInput, fields, options = {}) {
@@ -1368,12 +1140,11 @@ export function setupLocalLocationFields() {
     locationInput.dataset.resolutionToken = String(resolutionToken);
     const location = locationInput.value.trim();
     const status = fields.querySelector(".location-resolution-status");
-    const timezoneInput = fields.querySelector('[name="timezone"]');
     if (!location) {
       setStatus(status, "Type or select a city first.", "error");
       return null;
     }
-    setStatus(status, "Finding city coordinates and time zone…", "loading");
+    setStatus(status, "Finding city coordinates…", "loading");
     const submitButtons = Array.from(form.querySelectorAll('button[type="submit"]'));
     const priorDisabled = submitButtons.map((button) => button.disabled);
     submitButtons.forEach((button) => { button.disabled = true; });
@@ -1390,36 +1161,8 @@ export function setupLocalLocationFields() {
         if (coordinateToggle) coordinateToggle.checked = true;
         locationInput.value = coordinateLocationLabel(customCoordinates.lat, customCoordinates.long);
         locationInput.dataset.coordinateMode = "true";
-        const coordinateKey = `${formatCoordinateValue(customCoordinates.lat)},${formatCoordinateValue(customCoordinates.long)}`;
-        const utcMode = fields.querySelector('[name="utcMode"]')?.value || "auto";
-        if (
-          utcMode !== "manual" &&
-          !(
-            timezoneInput?.dataset.userSelected === "true" &&
-            timezoneInput.dataset.userSelectedCoordinates === coordinateKey
-          )
-        ) {
-          try {
-            const timezone = await lookupTimezoneForCoordinates(
-              customCoordinates.lat,
-              customCoordinates.long,
-            );
-            if (resolutionToken !== Number(locationInput.dataset.resolutionToken)) return null;
-            timezoneInput.value = timezone;
-            timezoneInput.dataset.userSelected = "false";
-            delete timezoneInput.dataset.userSelectedCoordinates;
-          } catch {
-            if (resolutionToken !== Number(locationInput.dataset.resolutionToken)) return null;
-            timezoneInput.value = "";
-            timezoneInput.dataset.userSelected = "false";
-            delete timezoneInput.dataset.userSelectedCoordinates;
-            updateOffsetPreview(form, fields);
-            setStatus(status, "Coordinates loaded, but the time zone could not be detected. Choose an IANA time zone or switch to Manual UTC offset.", "warning");
-            return { ...customCoordinates };
-          }
-        }
-        updateOffsetPreview(form, fields);
-        setStatus(status, "Coordinates loaded with the time zone determined from their location.", "success");
+        updateOffsetPreview(fields);
+        setStatus(status, "Coordinates loaded.", "success");
         return { ...customCoordinates };
       }
       let cities = [];
@@ -1436,12 +1179,9 @@ export function setupLocalLocationFields() {
       delete locationInput.dataset.coordinateMode;
       delete locationInput.dataset.locationBeforeCoordinates;
       setCoordinates(fields, record);
-      updateOffsetPreview(form, fields);
-      const zoneText = record.timezone && isValidTimeZone(record.timezone)
-        ? `${record.timezone} (${formatUtcOffset(offsetFromTimeZone({ timezone: record.timezone, utcOffset: record.utcOffset || 0 }, getRequestDateFromForm(form)))})`
-        : "no known time zone";
+      updateOffsetPreview(fields);
       const sourceText = record.source === "online-geocoder" ? "online city database" : "local city database";
-      setStatus(status, `Coordinates filled from the ${sourceText}. ${zoneText}.`, "success");
+      setStatus(status, `Coordinates filled from the ${sourceText}. Choose the UTC offset manually.`, "success");
       return record;
     } catch (error) {
       if (resolutionToken !== Number(locationInput.dataset.resolutionToken)) return null;
@@ -1476,22 +1216,16 @@ export function setupLocalLocationFields() {
         const lon = Number(position.coords.longitude.toFixed(6));
         const latInput = fields.querySelector('[name="lat"]');
         const lonInput = fields.querySelector('[name="long"]');
-        const timezoneInput = fields.querySelector('[name="timezone"]');
         latInput.value = lat;
         lonInput.value = lon;
         latInput.dataset.manual = "false";
         lonInput.dataset.manual = "false";
-        const utcMode = fields.querySelector('[name="utcMode"]');
-        if (utcMode) utcMode.value = "auto";
-        utcMode?.dispatchEvent(new Event("change", { bubbles: true }));
         try {
           if (typeof activateCoordinateMode === "function") await activateCoordinateMode();
           else {
             locationInput.value = coordinateLocationLabel(lat, lon);
-            const timezone = await timezoneForCoordinates(lat, lon);
-            if (timezoneInput) timezoneInput.value = timezone;
-            updateOffsetPreview(form, fields);
-            setStatus(status, `Coordinates added: ${lat}, ${lon} · ${timezone}.`, "success");
+            updateOffsetPreview(fields);
+            setStatus(status, `Coordinates added: ${lat}, ${lon}. Choose the UTC offset manually.`, "success");
           }
         } catch (error) {
           setStatus(status, error.message || "Coordinates were added, but the location mode could not be activated.", "warning");
@@ -1527,26 +1261,15 @@ export function setupLocalLocationFields() {
           <input id="${prefix}-longitude" name="long" type="number" min="-180" max="180" step="any" placeholder="e.g. -46.633308" />
         </div>
         <div class="local-coordinate-field">
-          <label for="${prefix}-utc-mode">UTC calculation</label>
-          <select id="${prefix}-utc-mode" name="utcMode">
-            <option value="auto">Automatic (city/time zone + date)</option>
-            <option value="manual">Manual UTC offset</option>
-          </select>
-        </div>
-        <div class="local-coordinate-field">
-          <label for="${prefix}-utc-offset">Manual offset (hours)</label>
-          <input id="${prefix}-utc-offset" name="utcOffset" type="number" min="-14" max="14" step="0.25" value="0" disabled />
-        </div>
-        <div class="local-coordinate-field local-timezone-field">
-          <label for="${prefix}-timezone">Time zone (IANA)</label>
-          <input id="${prefix}-timezone" name="timezone" type="text" list="trueSkyTimezones" placeholder="e.g. America/Sao_Paulo" autocomplete="off" spellcheck="false" />
+          <label for="${prefix}-utc-offset">UTC offset</label>
+          <input id="${prefix}-utc-offset" name="utcOffset" type="number" min="-14" max="14" step="0.25" value="0" />
         </div>
         <div class="location-actions">
           <button type="button" class="search-location-button">Search city / fill automatically</button>
           <button type="button" class="use-browser-location">Use my current location</button>
-          <output class="utc-offset-preview" aria-live="polite">Select a city or time zone to calculate UTC automatically.</output>
+          <output class="utc-offset-preview" aria-live="polite">Select the UTC offset manually.</output>
         </div>
-        <small class="utc-mode-help">Automatic UTC uses IANA time-zone rules for the selected chart date, including daylight-saving changes where applicable.</small>
+        <input type="hidden" name="utcMode" value="manual" />
         <div class="location-resolution-status" role="status" aria-live="polite"></div>`;
       const suggestions = locationInput.nextElementSibling;
       if (suggestions?.classList.contains("suggestions-box")) {
@@ -1556,28 +1279,20 @@ export function setupLocalLocationFields() {
       }
     }
 
-    // Add the new time-zone chooser and location actions to older/static forms too.
-    if (!fields.querySelector('[name="timezone"]')) {
-      const prefix = form.id || "chart";
-      const timezoneField = document.createElement("div");
-      timezoneField.className = "local-coordinate-field local-timezone-field";
-      timezoneField.innerHTML = `<label for="${prefix}-timezone">Time zone (IANA)</label><input id="${prefix}-timezone" name="timezone" type="text" list="trueSkyTimezones" placeholder="e.g. America/Sao_Paulo" autocomplete="off" spellcheck="false" />`;
-      fields.insertBefore(timezoneField, fields.querySelector(".utc-mode-help") || null);
-    }
+    fields.querySelectorAll('[name="timezone"], .local-timezone-field, .utc-mode-help').forEach((element) => element.remove());
+    fields.querySelector('select[name="utcMode"]')?.remove();
     if (!fields.querySelector(".location-actions")) {
       const actions = document.createElement("div");
       actions.className = "location-actions";
-      actions.innerHTML = `<button type="button" class="search-location-button">Search city / fill automatically</button><button type="button" class="use-browser-location">Use my current location</button><output class="utc-offset-preview" aria-live="polite">Select a city or time zone to calculate UTC automatically.</output>`;
-      fields.insertBefore(actions, fields.querySelector(".utc-mode-help") || null);
+      actions.innerHTML = `<button type="button" class="search-location-button">Search city / fill automatically</button><button type="button" class="use-browser-location">Use my current location</button><output class="utc-offset-preview" aria-live="polite">Select the UTC offset manually.</output>`;
+      fields.appendChild(actions);
     }
     if (!fields.querySelector(".location-resolution-status")) {
       const status = document.createElement("div");
       status.className = "location-resolution-status";
       status.setAttribute("role", "status");
       status.setAttribute("aria-live", "polite");
-      const help = fields.querySelector(".utc-mode-help");
-      if (help?.nextSibling) fields.insertBefore(status, help.nextSibling);
-      else fields.appendChild(status);
+      fields.appendChild(status);
     }
     if (!fields.querySelector('[name="useCoordinates"]')) {
       const prefix = form.id || "chart";
@@ -1601,23 +1316,20 @@ export function setupLocalLocationFields() {
 
     const latitudeInput = fields.querySelector('[name="lat"]');
     const longitudeInput = fields.querySelector('[name="long"]');
-    const utcMode = fields.querySelector('[name="utcMode"]');
     ensureUtcOffsetOptions(fields);
+    ensureManualUtcMode(fields);
     const utcOffset = fields.querySelector('[name="utcOffset"]');
-    const utcHelp = fields.querySelector(".utc-mode-help");
-    const timezoneInput = fields.querySelector('[name="timezone"]');
-    if (!latitudeInput || !longitudeInput || !utcMode || !utcOffset || !timezoneInput) return;
+    if (!latitudeInput || !longitudeInput || !utcOffset) return;
+    utcOffset.disabled = false;
     if (!locationInput.placeholder) locationInput.placeholder = "City, region/state, country";
     const resolutionStatus = fields.querySelector(".location-resolution-status");
     if (resolutionStatus && !resolutionStatus.textContent.trim()) {
-      setStatus(resolutionStatus, "Select a city suggestion to fill coordinates and time zone, or activate coordinate mode to use latitude/longitude directly.", "info");
+      setStatus(resolutionStatus, "Select a city to fill coordinates, or enter coordinates directly.", "info");
     }
     const useCoordinatesToggle = fields.querySelector('[name="useCoordinates"]');
     const useCoordinatesButton = fields.querySelector(".apply-coordinates-button");
 
-    let coordinateLookupRevision = 0;
-    async function applyCoordinateMode({ lookupTimezone = true } = {}) {
-      const revision = ++coordinateLookupRevision;
+    async function applyCoordinateMode() {
       const rawLat = latitudeInput.value.trim();
       const rawLong = longitudeInput.value.trim();
       const lat = Number(rawLat);
@@ -1636,32 +1348,12 @@ export function setupLocalLocationFields() {
       locationInput.dataset.coordinateMode = "true";
       document.querySelectorAll(".suggestions-box").forEach((box) => { box.style.display = "none"; });
 
-      if (lookupTimezone && utcMode.value !== "manual") {
-        try {
-          // A previous city's time zone may no longer match the coordinates now in use.
-          const timezone = await lookupTimezoneForCoordinates(lat, longitude);
-          if (revision !== coordinateLookupRevision) return true;
-          timezoneInput.value = timezone;
-          timezoneInput.dataset.userSelected = "false";
-          delete timezoneInput.dataset.userSelectedCoordinates;
-          timezoneInput.dispatchEvent(new Event("change", { bubbles: true }));
-        } catch (_) {
-          if (revision !== coordinateLookupRevision) return true;
-          timezoneInput.value = "";
-          timezoneInput.dataset.userSelected = "false";
-          delete timezoneInput.dataset.userSelectedCoordinates;
-          setStatus(resolutionStatus, "Coordinates added, but the exact time zone could not be detected automatically. Choose an IANA time zone or switch to Manual UTC offset.", "warning");
-          updateOffsetPreview(form, fields);
-          return true;
-        }
-      }
-      updateOffsetPreview(form, fields);
+      updateOffsetPreview(fields);
       setStatus(resolutionStatus, `Using coordinates directly: ${formatCoordinateValue(lat)}, ${formatCoordinateValue(longitude)}. No city name is required.`, "success");
       return true;
     }
 
     function disableCoordinateMode() {
-      coordinateLookupRevision += 1;
       if (isCoordinateLocationLabel(locationInput.value)) {
         locationInput.value = locationInput.dataset.locationBeforeCoordinates || "";
       }
@@ -1669,7 +1361,7 @@ export function setupLocalLocationFields() {
       delete locationInput.dataset.coordinateMode;
       latitudeInput.dataset.manual = "false";
       longitudeInput.dataset.manual = "false";
-      updateOffsetPreview(form, fields);
+      updateOffsetPreview(fields);
       setStatus(resolutionStatus, locationInput.value.trim()
         ? "City mode is active. Choose a city to refresh coordinates automatically."
         : "City mode is active. Enter or select a city, or turn coordinate mode back on.", "info");
@@ -1693,43 +1385,8 @@ export function setupLocalLocationFields() {
       });
     });
 
-    const syncMode = () => {
-      const manual = utcMode.value === "manual";
-      utcOffset.disabled = !manual;
-      if (utcHelp) {
-        utcHelp.textContent = manual
-          ? "Manual offset is in hours: west of UTC is negative. Quarter-hour offsets are supported."
-          : "Automatic UTC uses IANA time-zone rules for the selected chart date, including daylight-saving changes where applicable.";
-      }
-      updateOffsetPreview(form, fields);
-    };
-
-    utcMode.addEventListener("change", syncMode);
-    utcOffset.addEventListener("input", () => updateOffsetPreview(form, fields));
-    timezoneInput.addEventListener("input", () => {
-      timezoneInput.dataset.userSelected = "true";
-      const lat = Number(latitudeInput.value);
-      const longitude = Number(longitudeInput.value);
-      timezoneInput.dataset.userSelectedCoordinates =
-        Number.isFinite(lat) && Number.isFinite(longitude)
-          ? `${formatCoordinateValue(lat)},${formatCoordinateValue(longitude)}`
-          : "";
-      updateOffsetPreview(form, fields);
-    });
-    timezoneInput.addEventListener("change", () => {
-      if (timezoneInput.value && !isValidTimeZone(timezoneInput.value)) {
-        setStatus(fields.querySelector(".location-resolution-status"), `Unknown time zone "${timezoneInput.value}". Choose a value from the suggestions.`, "error");
-      } else {
-        updateOffsetPreview(form, fields);
-      }
-    });
-
-    ["day", "month", "year", "hour", "minute"].forEach((name) => {
-      form.querySelectorAll(`[name="${name}"]`).forEach((input) => {
-        input.addEventListener("change", () => updateOffsetPreview(form, fields));
-        input.addEventListener("input", () => updateOffsetPreview(form, fields));
-      });
-    });
+    utcOffset.addEventListener("input", () => updateOffsetPreview(fields));
+    utcOffset.addEventListener("change", () => updateOffsetPreview(fields));
 
     locationInput.addEventListener("input", () => {
       delete locationInput.dataset.lastResolvedLocation;
@@ -1751,7 +1408,6 @@ export function setupLocalLocationFields() {
       }
 
       // City entry/selection is authoritative, even if a previous coordinate mode was active.
-      coordinateLookupRevision += 1;
       if (useCoordinatesToggle) useCoordinatesToggle.checked = false;
       delete locationInput.dataset.coordinateMode;
       delete locationInput.dataset.locationBeforeCoordinates;
@@ -1774,7 +1430,7 @@ export function setupLocalLocationFields() {
     [latitudeInput, longitudeInput].forEach((input) => {
       input.addEventListener("input", () => {
         input.dataset.manual = "true";
-        updateOffsetPreview(form, fields);
+        updateOffsetPreview(fields);
       });
       input.addEventListener("change", () => {
         // Editing the coordinate fields immediately mirrors the numeric pair in the
@@ -1789,7 +1445,7 @@ export function setupLocalLocationFields() {
       if (useCoordinatesToggle) useCoordinatesToggle.checked = true;
       await applyCoordinateMode();
     });
-    syncMode();
+    updateOffsetPreview(fields);
     // Restore/initialize saved city fields as soon as this form is ready. This also
     // repairs older saved forms where a city was present but coordinates were blank.
     if (locationInput.value.trim()) {
@@ -1808,10 +1464,6 @@ export function setupLocalLocationFields() {
       }
     }
   });
-
-  getCityRecords()
-    .then((cities) => populateTimezoneDatalist(cities))
-    .catch(() => populateTimezoneDatalist([]));
 }
 
 document.addEventListener("DOMContentLoaded", setupLocalLocationFields);

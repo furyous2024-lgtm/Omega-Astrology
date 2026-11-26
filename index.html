@@ -212,14 +212,7 @@
         />
       </div>
       <div class="local-coordinate-field">
-        <label for="natalUtcMode">UTC calculation</label>
-        <select id="natalUtcMode" name="utcMode">
-          <option value="auto">Automatic (city/time zone + date)</option>
-          <option value="manual">Manual UTC offset</option>
-        </select>
-      </div>
-      <div class="local-coordinate-field">
-        <label for="natalUtcOffset">Manual offset (hours)</label>
+        <label for="natalUtcOffset">UTC offset</label>
         <input
           id="natalUtcOffset"
           name="utcOffset"
@@ -228,12 +221,9 @@
           max="14"
           step="0.25"
           value="0"
-          disabled
         />
       </div>
-      <small class="utc-mode-help">
-        Automatic UTC uses IANA time-zone rules for the selected chart date, including daylight-saving changes where applicable.
-      </small>
+      <input type="hidden" name="utcMode" value="manual" />
     </div>
   
     <button

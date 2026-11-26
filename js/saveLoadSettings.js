@@ -1437,7 +1437,7 @@ function loadSettingsIntoForm(settings) {
   }
   // Never restore location from a saved preset, including legacy presets that
   // still contain locationSettings. Keep the active/account Default Location
-  // and its coordinates/time zone unchanged when applying settings.
+  // and its coordinates/UTC offset unchanged when applying settings.
   // Load graph planet settings
   for (const planet in settings.graphSettings.planetSettings) {
     const graphPlanet = settings.graphSettings.planetSettings[planet];
@@ -1797,8 +1797,7 @@ function getSettingsData() {
       location: document.getElementById("natalLocation")?.value || "",
       lat: document.querySelector('#natalForm [name="lat"]')?.value || "",
       long: document.querySelector('#natalForm [name="long"]')?.value || "",
-      timezone: document.querySelector('#natalForm [name="timezone"]')?.value || "",
-      utcMode: document.querySelector('#natalForm [name="utcMode"]')?.value || "auto",
+      utcMode: "manual",
       utcOffset: document.querySelector('#natalForm [name="utcOffset"]')?.value || "0",
       useCoordinates: document.querySelector('#natalForm [name="useCoordinates"]')?.checked === true,
     },
