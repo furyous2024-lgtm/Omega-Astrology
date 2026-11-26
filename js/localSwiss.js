@@ -1057,12 +1057,16 @@ async function chartDataFromSwiss(result, request) {
       : document.querySelector(
           '#system-settings select[name="ayanamsaSystem"]',
         );
-  if (ayanamsaSelect && result.ayanamsaValues) {
+  if (ayanamsaSelect) {
+    const ayanamsaValues = result.ayanamsaValues || {};
     for (const option of ayanamsaSelect.options) {
-      const value = Number(result.ayanamsaValues[option.value]);
-      if (!Number.isFinite(value)) continue;
       option.dataset.baseLabel ||= option.textContent;
-      option.textContent = `${option.dataset.baseLabel} (${value.toFixed(10)}°)`;
+      const value = option.selected
+        ? Number(result.ayanamsa)
+        : Number(ayanamsaValues[option.value]);
+      option.textContent = Number.isFinite(value)
+        ? `${option.dataset.baseLabel} (${value.toFixed(10)}°)`
+        : option.dataset.baseLabel;
     }
   }
   if (!Array.isArray(result.houseCusps) || result.houseCusps.length !== 12) {
