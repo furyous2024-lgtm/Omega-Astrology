@@ -85,7 +85,8 @@
       cleanText(chart.day),
       cleanText(chart.hour),
       cleanText(chart.minute).padStart(2, "0"),
-      normalizeText(chart.location)
+      normalizeText(chart.location),
+      chart.utcMode === "auto" ? "auto" : "manual"
     ].join("|");
   }
 
@@ -118,7 +119,8 @@
       lat: data.lat == null ? null : data.lat,
       long: data.long == null ? null : data.long,
       utc: data.utc == null ? (data.utcOffset == null ? 0 : data.utcOffset) : data.utc,
-      utcMode: "manual",
+      utcMode: data.utcMode === "auto" ? "auto" : "manual",
+      timezone: cleanText(data.timezone),
       location: cleanText(data.location),
       created_at: timestampIso(data.createdAt || data.created_at),
       updated_at: timestampIso(data.updatedAt || data.updated_at),
@@ -168,7 +170,8 @@
       lat: chartInput.lat == null ? null : chartInput.lat,
       long: chartInput.long == null ? null : chartInput.long,
       utc,
-      utcMode: "manual",
+      utcMode: chartInput.utcMode === "auto" ? "auto" : "manual",
+      ...(cleanText(chartInput.timezone) ? { timezone: cleanText(chartInput.timezone) } : {}),
       location: cleanText(chartInput.location)
     };
     if (!chart.year || !chart.month || !chart.day || chart.hour === "" || chart.minute === "") {
@@ -290,7 +293,13 @@
           const latitude = form?.querySelector('[name="lat"]');
           const longitude = form?.querySelector('[name="long"]');
           const utcMode = form?.querySelector('[name="utcMode"]');
-          if (utcMode) utcMode.value = "manual";
+          const autoUtc = form?.querySelector('[name="autoUtc"]');
+          const savedUtcMode = chart.utcMode === "auto" ? "auto" : "manual";
+          if (utcMode) utcMode.value = savedUtcMode;
+          if (autoUtc) {
+            autoUtc.checked = savedUtcMode === "auto";
+            autoUtc.dispatchEvent(new Event("change", { bubbles: true }));
+          }
           if (utcOffset) utcOffset.value = chart.utc == null ? "0" : chart.utc;
           if (latitude) latitude.value = chart.lat == null ? "" : chart.lat;
           if (longitude) longitude.value = chart.long == null ? "" : chart.long;
@@ -391,7 +400,8 @@
             lat: data.lat,
             long: data.long,
             utc: data.utcOffset,
-            utcMode: "manual",
+            utcMode: data.utcMode === "auto" ? "auto" : "manual",
+            timezone: data.timezone || "",
             location: data.location
           };
           const result = await save(chart);

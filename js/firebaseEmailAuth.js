@@ -259,7 +259,7 @@
     const lon = raw.long ?? raw.lon ?? raw.lng ?? raw.longitude ?? "";
     const utcValue = raw.utcOffset ?? raw.utc ?? raw.timezoneOffset ?? raw.utc_offset;
     const utc = utcValue == null || utcValue === "" ? 0 : utcValue;
-    const utcMode = "manual";
+    const utcMode = raw.utcMode === "auto" ? "auto" : "manual";
     const nowIso = now();
 
     return {
@@ -279,6 +279,7 @@
       utc,
       utcOffset: utc,
       utcMode,
+      timezone: raw.timezone || "",
       profile_type: raw.profile_type || raw.chart_type || "natal",
       natalData: raw.natalData || null,
       created_at: raw.created_at || nowIso,

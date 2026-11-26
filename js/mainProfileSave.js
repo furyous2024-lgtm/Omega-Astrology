@@ -35,6 +35,14 @@
   }
   function getFormSnapshot() {
     const storedNatalData = safeJson(localStorage.getItem("natalData"), null) || {};
+    const formAutoUtc = $("natalForm")?.querySelector('[name="autoUtc"]')?.checked === true;
+    const utcMode = storedNatalData.utcMode
+      ? (storedNatalData.utcMode === "auto" ? "auto" : "manual")
+      : (formAutoUtc ? "auto" : "manual");
+    const storedUtc = storedNatalData.utcOffset ?? storedNatalData.utc;
+    const utc = storedNatalData.utcMode === "auto" && storedUtc != null
+      ? storedUtc
+      : (getHiddenValue("utcOffset") || getHiddenValue("utc") || storedUtc || "");
     return {
       name: $("natalName")?.value || storedNatalData.name || "",
       day: $("natalDay")?.value || storedNatalData.day || "",
@@ -45,21 +53,26 @@
       location: $("natalLocation")?.value || storedNatalData.location || "",
       lat: getHiddenValue("lat") || getHiddenValue("latitude") || storedNatalData.lat || storedNatalData.latitude || "",
       long: getHiddenValue("long") || getHiddenValue("longitude") || storedNatalData.long || storedNatalData.lon || storedNatalData.longitude || "",
-      utc: getHiddenValue("utcOffset") || getHiddenValue("utc") || storedNatalData.utcOffset || storedNatalData.utc || "",
-      utcOffset: getHiddenValue("utcOffset") || getHiddenValue("utc") || storedNatalData.utcOffset || storedNatalData.utc || "",
-      utcMode: "manual",
+      utc,
+      utcOffset: utc,
+      utcMode,
     };
   }
   function applySavedChartGeo(chart) {
     const lat = chart?.lat ?? chart?.latitude;
     const lon = chart?.long ?? chart?.lon ?? chart?.lng ?? chart?.longitude;
     const utc = chart?.utcOffset ?? chart?.utc ?? chart?.timezoneOffset ?? chart?.utc_offset ?? 0;
-    const utcMode = "manual";
+    const utcMode = chart?.utcMode === "auto" ? "auto" : "manual";
     const pairs = { lat, latitude: lat, long: lon, longitude: lon, utcOffset: utc, utc, utcMode };
     Object.entries(pairs).forEach(([name, value]) => {
       const input = ensureHidden(name);
       if (input && value !== undefined && value !== null && String(value).trim() !== "") input.value = String(value);
     });
+    const autoUtc = $("natalForm")?.querySelector('[name="autoUtc"]');
+    if (autoUtc) {
+      autoUtc.checked = utcMode === "auto";
+      autoUtc.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     const locInput = $("natalLocation");
     if (locInput) {
       if (utc !== undefined && utc !== null && String(utc).trim() !== "") locInput.dataset.selectedUtcFallback = String(utc);

@@ -10,6 +10,7 @@ except Exception as exc:
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 EPHE = os.path.join(ROOT, 'ephe')
 swe.set_ephe_path(EPHE)
+_TIMEZONE_FINDER = None
 
 SIGNS = {
     'Aries':0,'Taurus':30,'Gemini':60,'Cancer':90,'Leo':120,'Virgo':150,
@@ -379,6 +380,68 @@ def julday_from_request(req):
     dt = parse_iso(req.get('utcDate'))
     return julday(dt)
 
+def resolve_automatic_utc(req):
+    """Resolve the wall-clock time at the supplied coordinates using IANA history."""
+    if str(req.get('utcMode') or '').strip().lower() != 'auto':
+        return req
+
+    try:
+        from timezonefinder import TimezoneFinder
+    except ImportError as exc:
+        raise ValueError('Automatic UTC requires the timezonefinder package. Install requirements.txt and retry.') from exc
+
+    global _TIMEZONE_FINDER
+    if _TIMEZONE_FINDER is None:
+        _TIMEZONE_FINDER = TimezoneFinder()
+
+    latitude = parse_float_field(req, ['lat', 'latitude'])
+    longitude = parse_float_field(req, ['long', 'lon', 'longitude'])
+    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+        raise ValueError('Automatic UTC requires valid latitude and longitude coordinates.')
+
+    timezone_name = _TIMEZONE_FINDER.timezone_at(lat=latitude, lng=longitude)
+    if not timezone_name:
+        raise ValueError('No IANA time zone is mapped to these coordinates. Enter the UTC offset manually.')
+
+    year = historical_to_astronomical(parse_int_field(req, ['historicalYear', 'year', 'birthYear']))
+    if year < 1:
+        raise ValueError('Automatic UTC is unavailable for dates before year 1. Enter the UTC offset manually.')
+    month = parse_month_field(req)
+    day = parse_int_field(req, ['day', 'birthDay'], default=1, min_value=1, max_value=31)
+    hour = parse_float_field(req, ['hour', 'birthHour', 'hourString'], default=0)
+    minute = parse_float_field(req, ['minute', 'birthMinute', 'minuteString'], default=0)
+    second = parse_float_field(req, ['second'], default=0)
+    total_seconds = hour * 3600 + minute * 60 + second
+    if not 0 <= hour < 24 or not 0 <= minute < 60 or not 0 <= second < 60:
+        raise ValueError('Automatic UTC requires a valid local time between 00:00 and 23:59:59.')
+
+    try:
+        local_time = datetime.datetime(year, month, day) + datetime.timedelta(seconds=total_seconds)
+        zone = ZoneInfo(timezone_name)
+    except (ValueError, OverflowError, KeyError) as exc:
+        raise ValueError(f'Could not resolve the local date in {timezone_name}: {exc}') from exc
+
+    candidates = []
+    for fold in (0, 1):
+        candidate = local_time.replace(tzinfo=zone, fold=fold)
+        round_trip = candidate.astimezone(datetime.timezone.utc).astimezone(zone)
+        if round_trip.replace(tzinfo=None) == local_time:
+            candidates.append(candidate)
+    if not candidates:
+        raise ValueError(f'The local time does not exist in {timezone_name} because clocks move forward. Enter a valid time or use manual UTC.')
+    offsets = {candidate.utcoffset() for candidate in candidates}
+    if len(offsets) > 1:
+        raise ValueError(f'The local time occurs twice in {timezone_name} because clocks move back. Choose manual UTC to select the intended occurrence.')
+
+    offset = next(iter(offsets))
+    if offset is None:
+        raise ValueError(f'No UTC offset is available for {timezone_name} at this date.')
+    return {
+        **req,
+        'utcOffset': offset.total_seconds() / 3600,
+        'timezone': timezone_name,
+    }
+
 def point(jd, body, ayan, flags=None):
     flags = flags if flags is not None else (swe.FLG_SWIEPH | swe.FLG_SPEED)
     result = swe.calc_ut(jd, body, flags)
@@ -464,6 +527,10 @@ def resolve_ayanamsa(req, jd):
     return signed_angle(swe.get_ayanamsa_ut(jd))
 
 def calculate_payload(req):
+    try:
+        req = resolve_automatic_utc(req)
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
     jd = julday_from_request(req)
     lat = parse_float_field(req, ['lat','latitude'], default=0)
     lon = parse_float_field(req, ['long','lon','longitude'], default=0)
@@ -486,7 +553,9 @@ def calculate_payload(req):
         req.get('houseSystemCode') or house_codes.get(selected_house) or 'P'
     )[:1].encode('ascii', 'ignore') or b'P'
 
-    out = {"success": True, "engine": "Swiss Ephemeris / pyswisseph", "julianDay": jd, "ayanamsa": ayan, "ayanamsaValues": current_ayanamsa_values(jd), "positions": {}, "houseCusps": [], "fixedStars": []}
+    out = {"success": True, "engine": "Swiss Ephemeris / pyswisseph", "julianDay": jd, "ayanamsa": ayan, "ayanamsaValues": current_ayanamsa_values(jd), "positions": {}, "houseCusps": [], "fixedStars": [], "utcOffset": parse_float_field(req, ['utcOffset', 'utc'], default=0), "utcMode": str(req.get('utcMode') or 'manual').lower()}
+    if req.get('timezone'):
+        out['timezone'] = req['timezone']
     selected_name = str(req.get('selectedAyanamsaSystem') or req.get('ayanamsaSystem') or '').strip()
     selected_lower = selected_name.lower()
     if selected_lower in ('ayanamsa personalizado', 'ayanamsa personalizado 1'):

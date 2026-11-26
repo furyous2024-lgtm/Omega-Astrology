@@ -39,9 +39,7 @@
     out.utc = out.utc ?? out.utcOffset;
     if (out.utc == null || out.utc === "") out.utc = 0;
     out.utcOffset = out.utc;
-    out.utcMode = "manual";
-    delete out.timezone;
-    delete out.timezoneName;
+    out.utcMode = out.utcMode === "auto" ? "auto" : "manual";
     out.location = out.location || "";
     out.profile_type = out.profile_type || out.chart_type || "natal";
     out.created_at = out.created_at || now();

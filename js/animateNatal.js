@@ -172,6 +172,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   nowButton.addEventListener("click", () => {
     const today = new Date();
+    const autoUtcToggle = document.querySelector('#natalForm [name="autoUtc"]');
+    if (autoUtcToggle) {
+      autoUtcToggle.checked = true;
+      autoUtcToggle.dispatchEvent(new Event("change", { bubbles: true }));
+    }
 
     document.getElementById("natalName").value = "Today";
     document.getElementById("natalDay").value = today.getDate();

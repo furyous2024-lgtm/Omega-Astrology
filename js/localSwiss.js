@@ -425,21 +425,27 @@ export async function prepareSwissRequest(request, form = null) {
     throw new Error("Latitude must be -90..90 and longitude -180..180.");
   }
 
+  const automaticUtcToggle = form?.querySelector('[name="autoUtc"]');
+  const utcMode = automaticUtcToggle
+    ? (automaticUtcToggle.checked ? "auto" : "manual")
+    : (String(payload.utcMode || "manual").toLowerCase() === "auto" ? "auto" : "manual");
   const offsetValue =
     form?.querySelector('[name="utcOffset"]')?.value ??
     payload.utcOffset ??
     natal.utcOffset ??
     0;
   const utcOffset = Number(offsetValue);
-  if (String(offsetValue).trim() === "" || !Number.isFinite(utcOffset) || utcOffset < -14 || utcOffset > 14) {
+  if (utcMode === "manual" && (String(offsetValue).trim() === "" || !Number.isFinite(utcOffset) || utcOffset < -14 || utcOffset > 14)) {
     throw new Error("Manual UTC offset must be between -14 and +14 hours.");
   }
 
   payload.lat = latitude;
   payload.long = longitude;
   payload.utcOffset = utcOffset;
-  payload.utcMode = "manual";
+  payload.utcMode = utcMode;
   delete payload.timezone;
+  const modeField = form?.querySelector('[name="utcMode"]');
+  if (modeField) modeField.value = utcMode;
   payload.useCoordinates = !!manualCoordinates;
   payload.location = manualCoordinates
     ? coordinateLocationLabel(latitude, longitude)
@@ -923,8 +929,9 @@ async function chartDataFromSwiss(result, request) {
     minute: Number(request.minute ?? natal.minute ?? 0),
     hourString: String(request.hour ?? natal.hour ?? "00").padStart(2, "0"),
     minuteString: String(request.minute ?? natal.minute ?? "00").padStart(2, "0"),
-    utcOffset: request.utcOffset ?? natal.utcOffset,
-    utcMode: "manual",
+    utcOffset: result.utcOffset ?? request.utcOffset ?? natal.utcOffset,
+    utcMode: result.utcMode || request.utcMode || "manual",
+    ...(result.timezone ? { timezone: result.timezone } : {}),
     location: request.location || natal.location || "",
     lat: request.lat,
     long: request.long,
@@ -1106,7 +1113,7 @@ export function setupLocalLocationFields() {
     input.replaceWith(select);
   }
 
-  function ensureManualUtcMode(fields) {
+  function ensureUtcModeControl(fields, form) {
     let mode = fields.querySelector('[name="utcMode"]');
     if (!mode || mode.tagName === "SELECT") {
       const hidden = document.createElement("input");
@@ -1115,12 +1122,44 @@ export function setupLocalLocationFields() {
       mode?.replaceWith(hidden);
       mode = hidden;
     }
-    mode.value = "manual";
+    let toggle = fields.querySelector('[name="autoUtc"]');
+    if (!toggle) {
+      const label = document.createElement("label");
+      label.className = "auto-utc-option";
+      const prefix = form.id || "chart";
+      label.htmlFor = `${prefix}-auto-utc`;
+      label.innerHTML = `<input id="${prefix}-auto-utc" name="autoUtc" type="checkbox" value="true" /><span><strong>Use automatic UTC</strong><small>Resolve the historical time zone and daylight-saving rules from these coordinates.</small></span>`;
+      const offsetInput = fields.querySelector('[name="utcOffset"]');
+      const offsetField = offsetInput?.closest(".local-coordinate-field");
+      if (offsetField) offsetField.insertAdjacentElement("afterend", label);
+      else fields.insertBefore(label, mode);
+      toggle = label.querySelector('[name="autoUtc"]');
+    }
+    if (!toggle.dataset.initialized) {
+      toggle.checked = form.id === "natalForm";
+      toggle.dataset.initialized = "true";
+    }
+    const offset = fields.querySelector('[name="utcOffset"]');
+    const syncMode = () => {
+      mode.value = toggle.checked ? "auto" : "manual";
+      if (offset) offset.disabled = toggle.checked;
+      updateOffsetPreview(fields);
+    };
+    toggle.addEventListener("change", syncMode);
+    if (!form.dataset.utcModeResetBound) {
+      form.dataset.utcModeResetBound = "true";
+      form.addEventListener("reset", () => setTimeout(syncMode, 0));
+    }
+    syncMode();
   }
 
   function updateOffsetPreview(fields) {
     const output = fields.querySelector(".utc-offset-preview");
     if (!output) return;
+    if (fields.querySelector('[name="autoUtc"]')?.checked) {
+      output.textContent = "Automatic UTC will use the coordinate's historical time zone and daylight-saving rules.";
+      return;
+    }
     const offset = Number(fields.querySelector('[name="utcOffset"]')?.value);
     output.textContent = Number.isFinite(offset) ? `Selected offset: ${formatUtcOffset(offset)}` : "Select a valid UTC offset";
   }
@@ -1181,7 +1220,7 @@ export function setupLocalLocationFields() {
       setCoordinates(fields, record);
       updateOffsetPreview(fields);
       const sourceText = record.source === "online-geocoder" ? "online city database" : "local city database";
-      setStatus(status, `Coordinates filled from the ${sourceText}. Choose the UTC offset manually.`, "success");
+      setStatus(status, `Coordinates filled from the ${sourceText}. Use automatic UTC or select a manual offset below.`, "success");
       return record;
     } catch (error) {
       if (resolutionToken !== Number(locationInput.dataset.resolutionToken)) return null;
@@ -1225,7 +1264,7 @@ export function setupLocalLocationFields() {
           else {
             locationInput.value = coordinateLocationLabel(lat, lon);
             updateOffsetPreview(fields);
-            setStatus(status, `Coordinates added: ${lat}, ${lon}. Choose the UTC offset manually.`, "success");
+            setStatus(status, `Coordinates added: ${lat}, ${lon}. Automatic UTC will use these coordinates.`, "success");
           }
         } catch (error) {
           setStatus(status, error.message || "Coordinates were added, but the location mode could not be activated.", "warning");
@@ -1261,7 +1300,7 @@ export function setupLocalLocationFields() {
           <input id="${prefix}-longitude" name="long" type="number" min="-180" max="180" step="any" placeholder="e.g. -46.633308" />
         </div>
         <div class="local-coordinate-field">
-          <label for="${prefix}-utc-offset">UTC offset</label>
+          <label for="${prefix}-utc-offset">Manual UTC offset</label>
           <input id="${prefix}-utc-offset" name="utcOffset" type="number" min="-14" max="14" step="0.25" value="0" />
         </div>
         <div class="location-actions">
@@ -1317,10 +1356,9 @@ export function setupLocalLocationFields() {
     const latitudeInput = fields.querySelector('[name="lat"]');
     const longitudeInput = fields.querySelector('[name="long"]');
     ensureUtcOffsetOptions(fields);
-    ensureManualUtcMode(fields);
+    ensureUtcModeControl(fields, form);
     const utcOffset = fields.querySelector('[name="utcOffset"]');
     if (!latitudeInput || !longitudeInput || !utcOffset) return;
-    utcOffset.disabled = false;
     if (!locationInput.placeholder) locationInput.placeholder = "City, region/state, country";
     const resolutionStatus = fields.querySelector(".location-resolution-status");
     if (resolutionStatus && !resolutionStatus.textContent.trim()) {

@@ -475,7 +475,7 @@ async function runSwissEphemeris(payload) {
   }
   return {
     success: false,
-    error: `Swiss Ephemeris service unavailable. Attempts: ${attemptedErrors.join(' | ')}. Local Windows: py -3.11 -m pip install pyswisseph. Render/Linux: use the included Dockerfile/render.yaml so python3 has pyswisseph installed.`,
+    error: `Swiss Ephemeris service unavailable. Attempts: ${attemptedErrors.join(' | ')}. Local Windows: py -3.11 -m pip install -r requirements.txt (automatic UTC also needs timezonefinder). Render/Linux: use the included Dockerfile/render.yaml so Python dependencies are installed.`,
   };
 }
 

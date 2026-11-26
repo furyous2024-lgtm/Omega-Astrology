@@ -720,6 +720,41 @@
   grid-column: 1 / -1;
 }
 
+.auto-utc-option {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #dce5ef;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #3b536d;
+  cursor: pointer;
+}
+
+.local-chart-location-fields .auto-utc-option input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: #2d4967;
+}
+
+.auto-utc-option span {
+  display: grid;
+  gap: 3px;
+}
+
+.auto-utc-option strong {
+  font-size: 12px;
+}
+
+.auto-utc-option small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .location-actions {
   grid-column: 1 / -1;
   display: flex;

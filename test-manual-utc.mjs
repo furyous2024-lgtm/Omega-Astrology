@@ -13,6 +13,7 @@ const fields = {
   lat: { value: "-23.5505", dataset: { manual: "true" } },
   long: { value: "-46.6333", dataset: { manual: "true" } },
   utcOffset: { value: "-3.5" },
+  autoUtc: { checked: false },
   useCoordinates: { checked: false },
 };
 const form = {
@@ -27,17 +28,36 @@ const request = await prepareSwissRequest({
   lat: -23.5505,
   long: -46.6333,
   utcOffset: -4,
-  utcMode: "auto",
-  timezone: "America/New_York",
+  utcMode: "manual",
 }, form);
 
 assert.equal(request.utcOffset, -3.5);
 assert.equal(request.utcMode, "manual");
 assert.equal("timezone" in request, false);
 
+fields.autoUtc.checked = true;
+const automaticRequest = await prepareSwissRequest({
+  location: fields.location.value,
+  lat: -23.5505,
+  long: -46.6333,
+  utcOffset: -4,
+  utcMode: "manual",
+  timezone: "America/New_York",
+}, form);
+assert.equal(automaticRequest.utcMode, "auto");
+assert.equal("timezone" in automaticRequest, false);
+fields.autoUtc.checked = false;
+
 const savedDocuments = [];
 const birthCharts = {
-  async get() { return { docs: [] }; },
+  async get() {
+    return {
+      docs: savedDocuments.map((data, index) => ({
+        id: String(index),
+        data: () => data,
+      })),
+    };
+  },
   doc() {
     return { async set(data) { savedDocuments.push(data); } };
   },
@@ -70,8 +90,7 @@ await window.TrueSkyFirebaseCharts.save({
   lat: -23.5505,
   long: -46.6333,
   utc: request.utcOffset,
-  utcMode: "auto",
-  timezone: "America/New_York",
+  utcMode: "manual",
   location: request.location,
 });
 
@@ -80,4 +99,22 @@ assert.equal(savedDocuments[0].utc, -3.5);
 assert.equal(savedDocuments[0].utcMode, "manual");
 assert.equal("timezone" in savedDocuments[0], false);
 
-console.log("Manual UTC calculation and Firebase save passed.");
+await window.TrueSkyFirebaseCharts.save({
+  name: "Manual UTC test",
+  year: 2000,
+  month: 1,
+  day: 1,
+  hour: 12,
+  minute: 0,
+  lat: -23.5505,
+  long: -46.6333,
+  utc: -3,
+  utcMode: "auto",
+  timezone: "America/Sao_Paulo",
+  location: request.location,
+});
+assert.equal(savedDocuments[1].utc, -3);
+assert.equal(savedDocuments[1].utcMode, "auto");
+assert.equal(savedDocuments[1].timezone, "America/Sao_Paulo");
+
+console.log("Manual/automatic UTC selection and Firebase save passed.");

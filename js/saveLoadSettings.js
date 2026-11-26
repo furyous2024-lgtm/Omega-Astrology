@@ -1797,7 +1797,7 @@ function getSettingsData() {
       location: document.getElementById("natalLocation")?.value || "",
       lat: document.querySelector('#natalForm [name="lat"]')?.value || "",
       long: document.querySelector('#natalForm [name="long"]')?.value || "",
-      utcMode: "manual",
+      utcMode: document.querySelector('#natalForm [name="autoUtc"]')?.checked === true ? "auto" : "manual",
       utcOffset: document.querySelector('#natalForm [name="utcOffset"]')?.value || "0",
       useCoordinates: document.querySelector('#natalForm [name="useCoordinates"]')?.checked === true,
     },

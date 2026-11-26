@@ -212,7 +212,7 @@
         />
       </div>
       <div class="local-coordinate-field">
-        <label for="natalUtcOffset">UTC offset</label>
+        <label for="natalUtcOffset">Manual UTC offset</label>
         <input
           id="natalUtcOffset"
           name="utcOffset"
@@ -223,7 +223,11 @@
           value="0"
         />
       </div>
-      <input type="hidden" name="utcMode" value="manual" />
+      <label class="auto-utc-option" for="natalAutoUtc">
+        <input id="natalAutoUtc" name="autoUtc" type="checkbox" value="true" checked />
+        <span><strong>Use automatic UTC</strong><small>Resolve the historical time zone and daylight-saving rules from these coordinates.</small></span>
+      </label>
+      <input type="hidden" name="utcMode" value="auto" />
     </div>
   
     <button
