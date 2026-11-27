@@ -77,7 +77,7 @@ const returnDate = await requestSwissReturnDate({
 assert.equal(returnDate.utcOffset, -4);
 assert.equal(
   preview.textContent,
-  "Automatic UTC offset: UTC−04:00 (America/New_York)",
+  "UTC automatic: UTC−04:00 (America/New_York)",
 );
 fields.autoUtc.checked = false;
 

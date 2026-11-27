@@ -1,6 +1,7 @@
 "use strict";
 
 let cityRecordsPromise;
+let latestAyanamsaLabelRequest = 0;
 
 const MIDPOINT_BOUNDARIES = [
   ["Aries", 0],
@@ -184,10 +185,10 @@ function updateUtcOffsetPreview(fields, resolvedOffset, timezone) {
   if (resolvedOffset != null && Number.isFinite(offset)) {
     const zoneLabel = timezone ? ` (${timezone})` : "";
     output.textContent =
-      `Automatic UTC offset: ${formatUtcOffset(offset)}${zoneLabel}`;
+      `UTC automatic: ${formatUtcOffset(offset)}${zoneLabel}`;
     return;
   }
-  output.textContent = "Automatic UTC uses historical time-zone rules when available; for dates outside their range, it estimates UTC from longitude.";
+  output.textContent = "UTC automatic: offset will be resolved for the selected date and location.";
 }
 
 function getGeoCache() {
@@ -871,7 +872,7 @@ function swissEphemerisUrl() {
   return "https://true-sky-astrologia.onrender.com/api/swiss-ephemeris";
 }
 
-async function chartDataFromSwiss(result, request) {
+async function chartDataFromSwiss(result, request, labelRequest) {
   if (!result || result.success !== true || !result.positions) {
     throw new Error(result?.error || "Swiss Ephemeris returned no chart positions.");
   }
@@ -881,15 +882,26 @@ async function chartDataFromSwiss(result, request) {
       : document.querySelector(
           '#system-settings select[name="ayanamsaSystem"]',
         );
-  if (ayanamsaSelect) {
+  if (
+    ayanamsaSelect &&
+    labelRequest === latestAyanamsaLabelRequest &&
+    ayanamsaSelect.value === request.selectedAyanamsaSystem
+  ) {
     const ayanamsaValues = result.ayanamsaValues || {};
     for (const option of ayanamsaSelect.options) {
       option.dataset.baseLabel ||= option.textContent;
-      const value = option.selected
-        ? Number(result.ayanamsa)
-        : Number(ayanamsaValues[option.value]);
+      const isRequestedSystem = option.value === request.selectedAyanamsaSystem;
+      const isCustomSystem = /^Ayanamsa Personalizado(?: \d+)?$/.test(option.value);
+      const rawValue = isRequestedSystem
+        ? result.ayanamsa
+        : isCustomSystem
+          ? null
+          : ayanamsaValues[option.value];
+      const value = rawValue == null ? NaN : Number(rawValue);
+      const roundedValue = Number.isFinite(value) ? Number(value.toFixed(10)) : NaN;
+      const displayValue = Object.is(roundedValue, -0) ? 0 : roundedValue;
       option.textContent = Number.isFinite(value)
-        ? `${option.dataset.baseLabel} (${value.toFixed(10)}°)`
+        ? `${option.dataset.baseLabel} (${displayValue.toFixed(10)}°)`
         : option.dataset.baseLabel;
     }
   }
@@ -1060,6 +1072,7 @@ async function postSwissRequest(payload) {
 }
 
 export async function requestSwissChart(request, form = null) {
+  const labelRequest = ++latestAyanamsaLabelRequest;
   const payload = await prepareSwissRequest(request, form);
   const { response, responseBody } = await postSwissRequest(payload);
   let result;
@@ -1078,7 +1091,7 @@ export async function requestSwissChart(request, form = null) {
   if (!response.ok || result.success === false) {
     throw new Error(result.error || `Swiss Ephemeris request failed (${response.status}).`);
   }
-  const chartData = await chartDataFromSwiss(result, payload);
+  const chartData = await chartDataFromSwiss(result, payload, labelRequest);
   if (payload.utcMode === "auto") {
     updateUtcOffsetPreview(
       form?.querySelector(".local-chart-location-fields"),
@@ -1180,7 +1193,7 @@ export function setupLocalLocationFields() {
       toggle = label.querySelector('[name="autoUtc"]');
     }
     if (!toggle.dataset.initialized) {
-      toggle.checked = form.id === "natalForm";
+      toggle.checked = true;
       toggle.dataset.initialized = "true";
     }
     const offset = fields.querySelector('[name="utcOffset"]');
@@ -1205,7 +1218,9 @@ export function setupLocalLocationFields() {
       return;
     }
     const offset = Number(fields.querySelector('[name="utcOffset"]')?.value);
-    output.textContent = Number.isFinite(offset) ? `Selected offset: ${formatUtcOffset(offset)}` : "Select a valid UTC offset";
+    output.textContent = Number.isFinite(offset)
+      ? `UTC manual: ${formatUtcOffset(offset)}`
+      : "UTC: select a valid offset";
   }
 
   function setCoordinates(fields, record) {
