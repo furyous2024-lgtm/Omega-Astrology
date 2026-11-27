@@ -70,7 +70,7 @@ if abs(custom_payload['ayanamsaValues']['Ayanamsa Personalizado'] - custom_paylo
 
 custom2_payload = service.calculate_payload({
     'utcDate': '2000-01-01T12:00:00Z',
-    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 2',
+    'selectedAyanamsaSystem': 'Ayanamsa Fixo',
     'customAyanamsaValue': 24.25,
     'lat': 0,
     'long': 0,
@@ -80,7 +80,7 @@ if abs(custom2_payload['ayanamsa'] - 24.25) > 1e-12:
 
 degrees_payload = service.calculate_payload({
     'utcDate': '2000-01-01T12:00:00Z',
-    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 3',
+    'selectedAyanamsaSystem': 'Ayanamsa Livre',
     'customAyanamsaDegreesValue': -123.25,
     'lat': 0,
     'long': 0,
@@ -90,7 +90,7 @@ if abs(degrees_payload['ayanamsa'] - (-123.25)) > 1e-12:
 
 dms_payload = service.calculate_payload({
     'utcDate': '2000-01-01T12:00:00Z',
-    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 4',
+    'selectedAyanamsaSystem': 'Ayanamsa GMS',
     'customAyanamsaDegrees': -12,
     'customAyanamsaMinutes': 30,
     'customAyanamsaSeconds': 15,
@@ -103,7 +103,7 @@ if abs(dms_payload['ayanamsa'] - expected_dms) > 1e-12:
 
 julian_payload = service.calculate_payload({
     'utcDate': '2000-01-01T12:00:00Z',
-    'selectedAyanamsaSystem': 'Ayanamsa Personalizado 5',
+    'selectedAyanamsaSystem': 'Ayanamsa Juliana',
     'customAyanamsaJulianDate': 2451545.0,
     'lat': 0,
     'long': 0,

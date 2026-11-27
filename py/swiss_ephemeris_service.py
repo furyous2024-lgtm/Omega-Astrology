@@ -228,11 +228,11 @@ KANATAS_NAME = 'Kanatas'
 SHERATAN_NAME = 'Sheratan'
 MESARTHIM_NAME = 'Mesarthim'
 ASHWINI_NAME = 'Ashwini / Beta Arietis a 0°'
-CUSTOM_AYANAMSA_1_NAME = 'Ayanamsa Personalizado 1'
-CUSTOM_AYANAMSA_2_NAME = 'Ayanamsa Personalizado 2'
-CUSTOM_AYANAMSA_3_NAME = 'Ayanamsa Personalizado 3'
-CUSTOM_AYANAMSA_4_NAME = 'Ayanamsa Personalizado 4'
-CUSTOM_AYANAMSA_5_NAME = 'Ayanamsa Personalizado 5'
+CUSTOM_AYANAMSA_1_NAME = 'Ayanamsa J2000'
+CUSTOM_AYANAMSA_2_NAME = 'Ayanamsa Fixo'
+CUSTOM_AYANAMSA_3_NAME = 'Ayanamsa Livre'
+CUSTOM_AYANAMSA_4_NAME = 'Ayanamsa GMS'
+CUSTOM_AYANAMSA_5_NAME = 'Ayanamsa Juliana'
 
 # J2000 reference offsets for the custom sidereal ayanamsas.
 MIDPOINT_J2000 = 31.2816
@@ -487,15 +487,15 @@ def resolve_ayanamsa(req, jd):
         ayanamsa_name = selected_ayanamsa.lower()
         if ayanamsa_name in ('tropical', 'none'):
             return 0.0
-        if ayanamsa_name in ('ayanamsa personalizado', 'ayanamsa personalizado 1'):
+        if ayanamsa_name in ('ayanamsa personalizado', 'ayanamsa personalizado 1', 'ayanamsa j2000'):
             return true_sidereal_custom_ayanamsa(jd, parse_custom_ayanamsa(req))
-        if ayanamsa_name == 'ayanamsa personalizado 2':
+        if ayanamsa_name in ('ayanamsa personalizado 2', 'ayanamsa fixo'):
             return parse_custom_ayanamsa(req)
-        if ayanamsa_name == 'ayanamsa personalizado 3':
+        if ayanamsa_name in ('ayanamsa personalizado 3', 'ayanamsa livre'):
             return parse_bounded_ayanamsa(req, ('customAyanamsaDegreesValue',))
-        if ayanamsa_name == 'ayanamsa personalizado 4':
+        if ayanamsa_name in ('ayanamsa personalizado 4', 'ayanamsa gms'):
             return parse_custom_ayanamsa_dms(req)
-        if ayanamsa_name == 'ayanamsa personalizado 5':
+        if ayanamsa_name in ('ayanamsa personalizado 5', 'ayanamsa juliana'):
             reference_jd = req.get('customAyanamsaJulianDate')
             if reference_jd is None:
                 reference_jd = swe.julday(2000, 1, 1, 12.0)
@@ -576,16 +576,16 @@ def calculate_payload(req):
         out['timezone'] = req['timezone']
     selected_name = str(req.get('selectedAyanamsaSystem') or req.get('ayanamsaSystem') or '').strip()
     selected_lower = selected_name.lower()
-    if selected_lower in ('ayanamsa personalizado', 'ayanamsa personalizado 1'):
+    if selected_lower in ('ayanamsa personalizado', 'ayanamsa personalizado 1', 'ayanamsa j2000'):
         out["ayanamsaValues"]["Ayanamsa Personalizado"] = ayan
         out["ayanamsaValues"][CUSTOM_AYANAMSA_1_NAME] = ayan
-    elif selected_lower == 'ayanamsa personalizado 2':
+    elif selected_lower in ('ayanamsa personalizado 2', 'ayanamsa fixo'):
         out["ayanamsaValues"][CUSTOM_AYANAMSA_2_NAME] = ayan
-    elif selected_lower == 'ayanamsa personalizado 3':
+    elif selected_lower in ('ayanamsa personalizado 3', 'ayanamsa livre'):
         out["ayanamsaValues"][CUSTOM_AYANAMSA_3_NAME] = ayan
-    elif selected_lower == 'ayanamsa personalizado 4':
+    elif selected_lower in ('ayanamsa personalizado 4', 'ayanamsa gms'):
         out["ayanamsaValues"][CUSTOM_AYANAMSA_4_NAME] = ayan
-    elif selected_lower == 'ayanamsa personalizado 5':
+    elif selected_lower in ('ayanamsa personalizado 5', 'ayanamsa juliana'):
         out["ayanamsaValues"][CUSTOM_AYANAMSA_5_NAME] = ayan
 
     bodies = {

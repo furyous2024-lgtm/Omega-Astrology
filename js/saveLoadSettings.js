@@ -1350,9 +1350,15 @@ function loadSettingsIntoForm(settings) {
     ? savedZodiac
     : "Tropical";
   let ayanamsaValue = savedSystemSettings.ayanamsaSystem;
-  if (ayanamsaValue === "Ayanamsa Personalizado") {
-    ayanamsaValue = "Ayanamsa Personalizado 1";
-  }
+  const legacyAyanamsaNames = {
+    "Ayanamsa Personalizado": "Ayanamsa J2000",
+    "Ayanamsa Personalizado 1": "Ayanamsa J2000",
+    "Ayanamsa Personalizado 2": "Ayanamsa Fixo",
+    "Ayanamsa Personalizado 3": "Ayanamsa Livre",
+    "Ayanamsa Personalizado 4": "Ayanamsa GMS",
+    "Ayanamsa Personalizado 5": "Ayanamsa Juliana",
+  };
+  ayanamsaValue = legacyAyanamsaNames[ayanamsaValue] || ayanamsaValue;
   if (ayanamsaValue === "TRUE SIDEREAL-M Midpoint") {
     ayanamsaValue = "Midpoint";
   }

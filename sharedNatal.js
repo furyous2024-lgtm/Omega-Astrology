@@ -3604,6 +3604,11 @@ export function sharedNatal(
           '#system-settings select[name="ayanamsaSystem"]',
         );
         const caEl = document.getElementById("customAyanamsaValue");
+        const cadEl = document.getElementById("customAyanamsaDegreesValue");
+        const cdEl = document.getElementById("customAyanamsaDegrees");
+        const cmEl = document.getElementById("customAyanamsaMinutes");
+        const csEl = document.getElementById("customAyanamsaSeconds");
+        const cjEl = document.getElementById("customAyanamsaJulianDate");
         const hEl = document.querySelector(
           '#system-settings select[name="houseSystem"]',
         );
@@ -3677,6 +3682,11 @@ export function sharedNatal(
           (zEl && stored.zodiacSystem !== zEl.value) ||
           (ayEl && (stored.ayanamsaSystem || "Tropical") !== ayEl.value) ||
           (caEl && (Number(stored.customAyanamsaValue) || 0) !== (Number(caEl.value) || 0)) ||
+          (cadEl && (Number(stored.customAyanamsaDegreesValue) || 0) !== (Number(cadEl.value) || 0)) ||
+          (cdEl && (Number(stored.customAyanamsaDegrees) || 0) !== (Number(cdEl.value) || 0)) ||
+          (cmEl && (Number(stored.customAyanamsaMinutes) || 0) !== (Number(cmEl.value) || 0)) ||
+          (csEl && (Number(stored.customAyanamsaSeconds) || 0) !== (Number(csEl.value) || 0)) ||
+          (cjEl && (Number(stored.customAyanamsaJulianDate) || 2451545) !== (Number(cjEl.value) || 2451545)) ||
           (hEl && stored.houseSystem !== hEl.value) ||
           (cEl && stored.coordinateSystem !== cEl.value) ||
           (aoEl && stored.ascendantOverride !== aoEl.value) ||

@@ -14,8 +14,14 @@ export function displayZodiacSystemLabel(value) {
   const raw = String(value || "").trim();
   const lower = raw.toLowerCase();
   if (!raw || lower === "tropical") return "Tropical/Sideral";
+  if (lower === "13 equal" || lower.includes("equal13")) {
+    return "Igual (13 signos)";
+  }
   if (lower === "midpoint" || lower.includes("midpoint") || lower.includes("true sidereal")) {
-    return "Midpoint (True Sidereal)";
+    return "Pontos médios (13 signos)";
+  }
+  if (lower.includes("iau")) {
+    return "Constelações reais IAU (13 signos)";
   }
   if (lower === "sidereal13" || lower === "sidereal 13" || lower.includes("iau 13")) {
     return "Sidereal 13";
@@ -54,7 +60,9 @@ export function normalizeZodiacTextLabels(root) {
   if (!root) return;
   const normalize = (text) => String(text || "")
     .replace(/Zodiac:\s*Tropical(?!\/Sideral)\b/g, "Zodiac: Tropical/Sideral")
-    .replace(/Zodiac:\s*Midpoint(?! \(True Sidereal\))\b/g, "Zodiac: Midpoint (True Sidereal)");
+    .replace(/Zodiac:\s*13\s+Equal\b/g, "Zodiac: Igual (13 signos)")
+    .replace(/Zodiac:\s*(?:Midpoint(?: \(True Sidereal\))?|Midpoint\b)/g, "Zodiac: Pontos médios (13 signos)")
+    .replace(/Zodiac:\s*IAU Real Constellations\b/g, "Zodiac: Constelações reais IAU (13 signos)");
 
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const textNodes = [];

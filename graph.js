@@ -453,6 +453,21 @@ document.getElementById("graphForm").addEventListener("submit", async function (
   const customAyanamsaValue = Number(
     document.getElementById("customAyanamsaValue")?.value || 0
   );
+  const customAyanamsaDegreesValue = Number(
+    document.getElementById("customAyanamsaDegreesValue")?.value || 0
+  );
+  const customAyanamsaDegrees = Number(
+    document.getElementById("customAyanamsaDegrees")?.value || 0
+  );
+  const customAyanamsaMinutes = Number(
+    document.getElementById("customAyanamsaMinutes")?.value || 0
+  );
+  const customAyanamsaSeconds = Number(
+    document.getElementById("customAyanamsaSeconds")?.value || 0
+  );
+  const customAyanamsaJulianDate = Number(
+    document.getElementById("customAyanamsaJulianDate")?.value || 2451545
+  );
   const selectedHouseSystem = document.querySelector(
     '#system-settings select[name="houseSystem"]'
   ).value;
@@ -488,6 +503,11 @@ document.getElementById("graphForm").addEventListener("submit", async function (
   combinedData.selectedZodiacSystem = selectedZodiacSystem;
   combinedData.selectedAyanamsaSystem = selectedAyanamsaSystem;
   combinedData.customAyanamsaValue = customAyanamsaValue;
+  combinedData.customAyanamsaDegreesValue = customAyanamsaDegreesValue;
+  combinedData.customAyanamsaDegrees = customAyanamsaDegrees;
+  combinedData.customAyanamsaMinutes = customAyanamsaMinutes;
+  combinedData.customAyanamsaSeconds = customAyanamsaSeconds;
+  combinedData.customAyanamsaJulianDate = customAyanamsaJulianDate;
   combinedData.selectedHouseSystem = selectedHouseSystem;
   combinedData.selectedCoordinateSystem = selectedCoordinateSystem;
   combinedData.draconic = selectedDraconic;

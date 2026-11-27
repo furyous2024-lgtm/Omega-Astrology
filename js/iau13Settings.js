@@ -50,7 +50,7 @@
 
     if (isIauReal13(zodiacSelect.value)) {
       ayanamsaSelect.disabled = false;
-      ayanamsaSelect.title = "IAU Real 13: usa os limites reais das constelações. A ayanamsa escolhida controla as longitudes; os graus são medidos a partir dos limites reais.";
+      ayanamsaSelect.title = "Constelações reais IAU (13 signos): aceita todas as ayanamsas, inclusive J2000, valor fixo, graus livres, GMS e data juliana.";
     } else {
       ayanamsaSelect.disabled = false;
       if (isEqual13(zodiacSelect.value)) {

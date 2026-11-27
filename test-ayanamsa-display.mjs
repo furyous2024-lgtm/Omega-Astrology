@@ -13,7 +13,7 @@ globalThis.document = {
 globalThis.window = {};
 
 const { requestSwissChart } = await import("./js/localSwiss.js");
-const options = ["Tropical", "Lahiri", "Raman", "Ayanamsa Personalizado 2"].map(
+const options = ["Tropical", "Lahiri", "Raman", "Ayanamsa Fixo"].map(
   (value) => ({
     value,
     textContent: value,
@@ -65,7 +65,7 @@ function chartResponse(ayanamsa) {
       Tropical: 0,
       Lahiri: 24.12345678912,
       Raman: 22.50000000004,
-      "Ayanamsa Personalizado 2": 0,
+      "Ayanamsa Fixo": 0,
     },
     positions: Object.fromEntries(
       positionNames.map((name) => [name, { position: 1, speed: 0 }]),
@@ -147,5 +147,5 @@ await firstChart;
 
 assert.equal(options[1].textContent, "Lahiri (24.1234567891°)");
 assert.equal(options[2].textContent, "Raman (22.5000000000°)");
-assert.equal(options[3].textContent, "Ayanamsa Personalizado 2");
+assert.equal(options[3].textContent, "Ayanamsa Fixo");
 console.log("Ayanamsa labels use the selected date's values without stale responses.");

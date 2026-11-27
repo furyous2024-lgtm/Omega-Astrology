@@ -891,7 +891,9 @@ async function chartDataFromSwiss(result, request, labelRequest) {
     for (const option of ayanamsaSelect.options) {
       option.dataset.baseLabel ||= option.textContent;
       const isRequestedSystem = option.value === request.selectedAyanamsaSystem;
-      const isCustomSystem = /^Ayanamsa Personalizado(?: \d+)?$/.test(option.value);
+      const isCustomSystem =
+        /^Ayanamsa Personalizado(?: \d+)?$/.test(option.value) ||
+        ["Ayanamsa J2000", "Ayanamsa Fixo", "Ayanamsa Livre", "Ayanamsa GMS", "Ayanamsa Juliana"].includes(option.value);
       const rawValue = isRequestedSystem
         ? result.ayanamsa
         : isCustomSystem

@@ -60,8 +60,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const selected = ayanamsaSelect.value;
 
     if (customLabel && customInput) {
-      const isCustom1 = selected === "Ayanamsa Personalizado 1";
-      const isCustom2 = selected === "Ayanamsa Personalizado 2";
+      const isCustom1 = selected === "Ayanamsa J2000";
+      const isCustom2 = selected === "Ayanamsa Fixo";
       const needsCustomValue = isCustom1 || isCustom2;
       customLabel.textContent = isCustom2
         ? "Valor do ayanamsa (°):"
@@ -71,20 +71,20 @@ document.addEventListener("DOMContentLoaded", function () {
       customInput.disabled = !needsCustomValue;
     }
     if (customDegreesLabel && customDegreesInput) {
-      const isCustom3 = selected === "Ayanamsa Personalizado 3";
+      const isCustom3 = selected === "Ayanamsa Livre";
       customDegreesLabel.hidden = !isCustom3;
       customDegreesInput.hidden = !isCustom3;
       customDegreesInput.disabled = !isCustom3;
     }
     if (customDmsGroup) {
-      const isCustom4 = selected === "Ayanamsa Personalizado 4";
+      const isCustom4 = selected === "Ayanamsa GMS";
       customDmsGroup.hidden = !isCustom4;
       customDmsGroup.querySelectorAll("input").forEach((input) => {
         input.disabled = !isCustom4;
       });
     }
     if (customJulianLabel && customJulianInput) {
-      const isCustom5 = selected === "Ayanamsa Personalizado 5";
+      const isCustom5 = selected === "Ayanamsa Juliana";
       customJulianLabel.hidden = !isCustom5;
       customJulianInput.hidden = !isCustom5;
       customJulianInput.disabled = !isCustom5;

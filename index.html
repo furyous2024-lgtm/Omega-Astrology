@@ -1312,10 +1312,10 @@
     Zodiac system:
   </label>
   <select name="zodiacSystem">
-    <option value="Tropical" selected>Tropical 12 (30°)</option>
-    <option value="13 Equal">13 Equal (Ophiuchus #13)</option>
-    <option value="Midpoint">Midpoint (True Sidereal) — 13 signs, Ophiuchus midpoint</option>
-    <option value="IAU Real Constellations">IAU Real Constellations</option>
+    <option value="Tropical" selected>Tropical (12 signos)</option>
+    <option value="13 Equal">Igual (13 signos)</option>
+    <option value="Midpoint">Pontos médios (13 signos)</option>
+    <option value="IAU Real Constellations">Constelações reais IAU (13 signos)</option>
   </select>
 
   <label class="type-icon">
@@ -1325,11 +1325,6 @@
     <option value="Tropical" selected>Tropical</option>
     <option value="J2000">J2000</option>
     <option value="Pistak 22/03/60D.C">Pistak 1 22/03/60D.C</option>
-    <option value="Ayanamsa Personalizado 1">J2000 (referência)</option>
-    <option value="Ayanamsa Personalizado 2">Valor fixo (°)</option>
-    <option value="Ayanamsa Personalizado 3">Graus livres (°)</option>
-    <option value="Ayanamsa Personalizado 4">Arco GMS</option>
-    <option value="Ayanamsa Personalizado 5">Data juliana</option>
     <option value="Pistak 23/03/68A.C">Pistak 2 23/03/68A.C</option>
     <option value="Kanatas">Kanatas</option>
     <option value="Midpoint">Midpoint</option>
@@ -1382,6 +1377,11 @@
     <option value="Sheratan">Sheratan — Beta Arietis</option>
     <option value="Mesarthim">Mesarthim — Gamma Arietis</option>
     <option value="Ashwini / Beta Arietis a 0°">Ashwini / Beta Arietis</option>
+    <option value="Ayanamsa J2000">Valor J2000</option>
+    <option value="Ayanamsa Fixo">Valor Fixo (°)</option>
+    <option value="Ayanamsa Livre">Graus Livres (°)</option>
+    <option value="Ayanamsa GMS">Valor G.M.S.</option>
+    <option value="Ayanamsa Juliana">Valor Data Juliana</option>
   </select>
 
   <label id="customAyanamsaLabel" class="type-icon" for="customAyanamsaValue" hidden>
@@ -2991,8 +2991,9 @@
       <h3>Wheel Settings - Astrological Systems</h3>
       <ul>
         <li><strong>Zodiac System:</strong>
-          12 options including Tropical (default), Midpoint (True Sidereal),
-          13 Equal (Ophiuchus #13), IAU Real Constellations, Fagan/Bradley,
+          4 sistemas: Tropical (12 signos), Igual (13 signos),
+          Pontos médios (13 signos) e Constelações reais IAU (13 signos),
+          além de ayanamsas como Fagan/Bradley,
           Lahiri, DeLuce, Raman, and other Sidereal variants</li>
         <li><strong>House System:</strong>
           7 systems - Placidus (default), Equal, Whole Sign, Koch, Porphyrius,
